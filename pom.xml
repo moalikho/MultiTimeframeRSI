@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Project Information -->
+    <groupId>com.biotak</groupId>
+    <artifactId>MultiTimeframeRSI</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>MTF RSI</name>
+    <description>Multi-Timeframe RSI Indicator for MotiveWave</description>
+
+    <properties>
+        <!-- Java Version -->
+        <java.version>24</java.version>
+        <maven.compiler.source>24</maven.compiler.source>
+        <maven.compiler.target>24</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        
+        <!-- MotiveWave Extensions paths -->
+        <mw.extensions>${user.home}/MotiveWave Extensions</mw.extensions>
+        <mw.dev>${mw.extensions}/dev</mw.dev>
+        <mw.lib>${mw.extensions}/lib</mw.lib>
+        
+        <!-- Plugin Versions -->
+        <maven.compiler.plugin.version>3.11.0</maven.compiler.plugin.version>
+        <maven.jar.plugin.version>3.3.0</maven.jar.plugin.version>
+    </properties>
+
+    <dependencies>
+        <!-- MotiveWave SDK (local) -->
+        <dependency>
+            <groupId>com.motivewave</groupId>
+            <artifactId>mwave-sdk</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/mwave_sdk.jar</systemPath>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <sourceDirectory>src</sourceDirectory>
+        <plugins>
+            <!-- Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.plugin.version}</version>
+                <configuration>
+                    <release>${java.version}</release>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <debug>true</debug>
+                    <compilerArgs>
+                        <arg>-Xlint:deprecation</arg>
+                        <arg>-Xlint:unchecked</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- JAR Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${maven.jar.plugin.version}</version>
+                <configuration>
+                    <outputDirectory>${project.basedir}/build</outputDirectory>
+                    <finalName>mtf-rsi</finalName>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                        <manifestEntries>
+                            <Implementation-Title>MTF RSI</Implementation-Title>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                            <Build-Date>${maven.build.timestamp}</Build-Date>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <!-- AntRun Plugin - Deploy JAR to MotiveWave (default) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>deploy-release</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${mw.lib}"/>
+                                <copy file="${project.basedir}/build/mtf-rsi.jar" 
+                                      todir="${mw.lib}" 
+                                      overwrite="true" 
+                                      failonerror="false" 
+                                      verbose="true"/>
+                                <touch file="${mw.extensions}/.last_updated"/>
+                                <echo message="JAR deployed to: ${mw.lib}/mtf-rsi.jar"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Clean Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${mw.dev}</directory>
+                            <includes>
+                                <include>com/biotak/**</include>
+                            </includes>
+                        </fileset>
+                        <fileset>
+                            <directory>${project.basedir}/build</directory>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- Build Profiles -->
+    <profiles>
+        <!-- Development Profile (Hot-reload with .class files) -->
+        <profile>
+            <id>dev</id>
+            <properties>
+                <maven.test.skip>true</maven.test.skip>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- Skip JAR creation in dev mode -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-jar</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Deploy .class files for hot-reload -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>deploy-dev-classes</id>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <delete dir="${mw.dev}" quiet="true"/>
+                                        <mkdir dir="${mw.dev}"/>
+                                        <copy todir="${mw.dev}" overwrite="true">
+                                            <fileset dir="${project.build.outputDirectory}"/>
+                                        </copy>
+                                        <touch file="${mw.extensions}/.last_updated"/>
+                                        <echo message=""/>
+                                        <echo message="═══════════════════════════════════════════════════"/>
+                                        <echo message="  ✅ Development classes deployed to:"/>
+                                        <echo message="     ${mw.dev}"/>
+                                        <echo message=""/>
+                                        <echo message="  📌 To reload in MotiveWave:"/>
+                                        <echo message="     1. Remove study from chart"/>
+                                        <echo message="     2. Re-add study from menu"/>
+                                        <echo message="═══════════════════════════════════════════════════"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                            <!-- Override release deploy in dev mode -->
+                            <execution>
+                                <id>deploy-release</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Release Profile -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <release>${java.version}</release>
+                            <debug>false</debug>
+                            <debuglevel>none</debuglevel>
+                            <compilerArgs>
+                                <arg>-Xlint:deprecation</arg>
+                                <arg>-Xlint:unchecked</arg>
+                                <arg>-g:none</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <configuration>
+                            <archive>
+                                <addMavenDescriptor>false</addMavenDescriptor>
+                                <compress>true</compress>
+                                <index>true</index>
+                            </archive>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>
