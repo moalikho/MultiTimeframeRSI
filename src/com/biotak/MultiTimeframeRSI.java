@@ -269,9 +269,10 @@ public class MultiTimeframeRSI extends Study {
     private static final boolean[] DEFAULT_NORMALIZE = {false, false, true, true, true};
     
     // Reusable Color constants (مثل Stochastic)
-    private static final Color COLOR_FOREST_GREEN = new Color(40, 140, 60);
-    private static final Color COLOR_BRIGHT_BLUE = new Color(70, 130, 220);
-    private static final Color COLOR_ORANGE = new Color(210, 130, 50);
+    private static final Color COLOR_DARK_PURPLE = new Color(100, 70, 130);   // 240: بنفش تیره
+    private static final Color COLOR_DARK_TEAL = new Color(60, 120, 110);     // 60: سبز دریایی تیره
+    private static final Color COLOR_BLUE = new Color(70, 130, 180);          // 30: آبی ملایم
+    private static final Color COLOR_RED = new Color(180, 90, 90);            // 15: قرمز ملایم
     private static final Color COLOR_DARK_GRAY = new Color(60, 60, 60);
     private static final Color COLOR_MED_GRAY = new Color(100, 100, 100);
     private static final Color COLOR_LIGHT_GRAY = new Color(140, 140, 140);
@@ -345,40 +346,40 @@ public class MultiTimeframeRSI extends Study {
         normGrp.addRow(new IntegerDescriptor("normLookback", "Normalization Lookback Period", 
             DEFAULT_NORM_LOOKBACK, 10, 500, 10));
 
-        // ⭐⭐⭐ PRIMARY: RSI 240 - Forest Green
+        // ⭐⭐⭐ PRIMARY: RSI 240 - Dark Purple (بنفش تیره - ضخیم‌ترین)
         var grp5 = tab.addGroup("⭐⭐⭐ PRIMARY: RSI 240");
-        grp5.addRow(new BooleanDescriptor("show5", "Show RSI", true));
+        grp5.addRow(new BooleanDescriptor("show5", "Show RSI", false));
         grp5.addRow(new DoubleDescriptor("period5", "Period", 240.0, 2.0, 500.0, 0.01));
         grp5.addRow(new BooleanDescriptor("norm5", "Normalize", true));
-        grp5.addRow(new PathDescriptor("path5", "RSI Line", COLOR_FOREST_GREEN, 3.0f, null, true, true, true));
+        grp5.addRow(new PathDescriptor("path5", "RSI Line", COLOR_DARK_PURPLE, 3.0f, null, true, true, true));
         
-        // ⭐⭐ SECONDARY: RSI 60 - Bright Blue
+        // ⭐⭐ SECONDARY: RSI 60 - Dark Teal (سبز دریایی تیره)
         var grp4 = tab.addGroup("⭐⭐ SECONDARY: RSI 60");
         grp4.addRow(new BooleanDescriptor("show4", "Show RSI", true));
         grp4.addRow(new DoubleDescriptor("period4", "Period", 60.0, 2.0, 300.0, 0.01));
         grp4.addRow(new BooleanDescriptor("norm4", "Normalize", true));
-        grp4.addRow(new PathDescriptor("path4", "RSI Line", COLOR_BRIGHT_BLUE, 2.5f, DASH_6_3, true, true, true));
+        grp4.addRow(new PathDescriptor("path4", "RSI Line", COLOR_DARK_TEAL, 2.5f, null, true, true, true));
         
-        // ⭐ TERTIARY: RSI 30 - Orange
+        // ⭐ TERTIARY: RSI 30 - Blue (آبی ملایم)
         var grp3 = tab.addGroup("⭐ TERTIARY: RSI 30");
         grp3.addRow(new BooleanDescriptor("show3", "Show RSI", true));
         grp3.addRow(new DoubleDescriptor("period3", "Period", 30.0, 2.0, 100.0, 0.01));
         grp3.addRow(new BooleanDescriptor("norm3", "Normalize", true));
-        grp3.addRow(new PathDescriptor("path3", "RSI Line", COLOR_ORANGE, 2.0f, DASH_4_3, true, true, true));
+        grp3.addRow(new PathDescriptor("path3", "RSI Line", COLOR_BLUE, 1.8f, null, true, true, true));
         
-        // Support: RSI 15 - Medium Gray
+        // Support: RSI 15 - Red (قرمز ملایم - خط‌چین)
         var grp2 = tab.addGroup("Support: RSI 15");
         grp2.addRow(new BooleanDescriptor("show2", "Show RSI", true));
         grp2.addRow(new DoubleDescriptor("period2", "Period", 15.0, 2.0, 100.0, 0.01));
         grp2.addRow(new BooleanDescriptor("norm2", "Normalize", false));
-        grp2.addRow(new PathDescriptor("path2", "RSI Line", COLOR_MED_GRAY, 1.5f, DASH_2_4, true, true, true));
+        grp2.addRow(new PathDescriptor("path2", "RSI Line", COLOR_RED, 1.2f, DASH_4_3, true, true, true));
         
-        // Support: RSI 5 - Dark Gray (Fast)
+        // Support: RSI 5 - Dark Gray (خاکستری تیره)
         var grp1 = tab.addGroup("Support: RSI 5 (Fast)");
-        grp1.addRow(new BooleanDescriptor("show1", "Show RSI", true));
+        grp1.addRow(new BooleanDescriptor("show1", "Show RSI", false));
         grp1.addRow(new DoubleDescriptor("period1", "Period", 5.0, 2.0, 100.0, 0.01));
         grp1.addRow(new BooleanDescriptor("norm1", "Normalize", false));
-        grp1.addRow(new PathDescriptor("path1", "RSI Line", COLOR_DARK_GRAY, 1.2f, DASH_2_4, true, false, true));
+        grp1.addRow(new PathDescriptor("path1", "RSI Line", COLOR_DARK_GRAY, 1.0f, DASH_2_4, true, false, true));
         
         // Guides Tab
         var guidesTab = sd.addTab("Guides");
