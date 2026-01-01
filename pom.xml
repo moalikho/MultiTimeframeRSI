@@ -119,7 +119,7 @@
                         <fileset>
                             <directory>${mw.dev}</directory>
                             <includes>
-                                <include>com/biotak/**</include>
+                                <include>**/*</include>
                             </includes>
                         </fileset>
                         <fileset>

@@ -42,14 +42,8 @@ public class MultiTimeframeRSI extends Study {
         RSI1_RAW, RSI2_RAW, RSI3_RAW, RSI4_RAW, RSI5_RAW,
         // Internal values for smoothed averages (not exported)
         AVG_GAIN1, AVG_LOSS1, AVG_GAIN2, AVG_LOSS2, AVG_GAIN3, AVG_LOSS3,
-        AVG_GAIN4, AVG_LOSS4, AVG_GAIN5, AVG_LOSS5,
-        // Min/Max values for normalization (internal)
-        RSI3_MIN, RSI3_MAX, RSI4_MIN, RSI4_MAX, RSI5_MIN, RSI5_MAX
+        AVG_GAIN4, AVG_LOSS4, AVG_GAIN5, AVG_LOSS5
     }
-    
-    // Min/Max keys mapping for normalization
-    private static final Values[] MIN_VALUES = {null, null, Values.RSI3_MIN, Values.RSI4_MIN, Values.RSI5_MIN};
-    private static final Values[] MAX_VALUES = {null, null, Values.RSI3_MAX, Values.RSI4_MAX, Values.RSI5_MAX};
     
     // ═══════════════════════════════════════════════════════════════════════════
     // THREAD-SAFE SETTINGS CACHE (Immutable Snapshot Pattern)
@@ -269,10 +263,10 @@ public class MultiTimeframeRSI extends Study {
     private static final boolean[] DEFAULT_NORMALIZE = {false, false, true, true, true};
     
     // Reusable Color constants (مثل Stochastic)
-    private static final Color COLOR_DARK_PURPLE = new Color(100, 70, 130);   // 240: بنفش تیره
-    private static final Color COLOR_DARK_TEAL = new Color(60, 120, 110);     // 60: سبز دریایی تیره
-    private static final Color COLOR_BLUE = new Color(70, 130, 180);          // 30: آبی ملایم
-    private static final Color COLOR_RED = new Color(180, 90, 90);            // 15: قرمز ملایم
+    private static final Color COLOR_GREEN = new Color(40, 140, 60);          // 240: سبز
+    private static final Color COLOR_BLACK = new Color(40, 40, 40);           // 60: سیاه
+    private static final Color COLOR_BLUE = new Color(0, 0, 255);             // 30: آبی خالص
+    private static final Color COLOR_RED = new Color(240, 20, 20);            // 15: قرمز خیلی پررنگ
     private static final Color COLOR_DARK_GRAY = new Color(60, 60, 60);
     private static final Color COLOR_MED_GRAY = new Color(100, 100, 100);
     private static final Color COLOR_LIGHT_GRAY = new Color(140, 140, 140);
@@ -300,7 +294,6 @@ public class MultiTimeframeRSI extends Study {
     
     private static final int DEFAULT_MAX_LOOKBACK = 1000;
     private static final int DEFAULT_NORM_LOOKBACK = 100;
-    private static final double MIN_RANGE = 10.0; // مثل MT4 - حداقل range برای نرمالایزیشن
     
     // ═══════════════════════════════════════════════════════════════════════════
     // PUBLIC API
@@ -346,19 +339,19 @@ public class MultiTimeframeRSI extends Study {
         normGrp.addRow(new IntegerDescriptor("normLookback", "Normalization Lookback Period", 
             DEFAULT_NORM_LOOKBACK, 10, 500, 10));
 
-        // ⭐⭐⭐ PRIMARY: RSI 240 - Dark Purple (بنفش تیره - ضخیم‌ترین)
+        // ⭐⭐⭐ PRIMARY: RSI 240 - Green (سبز - ضخیم‌ترین)
         var grp5 = tab.addGroup("⭐⭐⭐ PRIMARY: RSI 240");
         grp5.addRow(new BooleanDescriptor("show5", "Show RSI", false));
         grp5.addRow(new DoubleDescriptor("period5", "Period", 240.0, 2.0, 500.0, 0.01));
         grp5.addRow(new BooleanDescriptor("norm5", "Normalize", true));
-        grp5.addRow(new PathDescriptor("path5", "RSI Line", COLOR_DARK_PURPLE, 3.0f, null, true, true, true));
+        grp5.addRow(new PathDescriptor("path5", "RSI Line", COLOR_GREEN, 3.0f, null, true, true, true));
         
-        // ⭐⭐ SECONDARY: RSI 60 - Dark Teal (سبز دریایی تیره)
+        // ⭐⭐ SECONDARY: RSI 60 - Black (سیاه)
         var grp4 = tab.addGroup("⭐⭐ SECONDARY: RSI 60");
         grp4.addRow(new BooleanDescriptor("show4", "Show RSI", true));
         grp4.addRow(new DoubleDescriptor("period4", "Period", 60.0, 2.0, 300.0, 0.01));
         grp4.addRow(new BooleanDescriptor("norm4", "Normalize", true));
-        grp4.addRow(new PathDescriptor("path4", "RSI Line", COLOR_DARK_TEAL, 2.5f, null, true, true, true));
+        grp4.addRow(new PathDescriptor("path4", "RSI Line", COLOR_BLACK, 2.0f, null, true, true, true));
         
         // ⭐ TERTIARY: RSI 30 - Blue (آبی ملایم)
         var grp3 = tab.addGroup("⭐ TERTIARY: RSI 30");
@@ -647,18 +640,23 @@ public class MultiTimeframeRSI extends Study {
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // NORMALIZATION (Adaptive Scaling) - Optimized with Incremental Min/Max
+    // NORMALIZATION (Percentile Ranking Method)
     // ═══════════════════════════════════════════════════════════════════════════
     
     /**
-     * نرمالایز کردن RSI برای نوسان کامل 0-100
-     * بهینه‌سازی شده با Incremental Min/Max (مثل MT4)
+     * نرمالایز کردن RSI با روش Percentile Ranking
+     * این روش نشون میده RSI فعلی در چه درصدی از مقادیر گذشته قرار داره
+     * 
+     * مزایا:
+     * - مقاوم در برابر outlier ها
+     * - همیشه خروجی 0-100 میده
+     * - برای RSI های بلندمدت با نوسان کم عالیه
      * 
      * @param series      DataSeries
      * @param index       اندیس جاری
      * @param rsiIndex    شماره RSI (0-4)
      * @param rawRsiKey   کلید RSI خام
-     * @param lookback    بازه lookback برای min/max
+     * @param lookback    بازه lookback
      * @param currentRsi  مقدار RSI فعلی
      * @return            RSI نرمالایز شده (0-100)
      */
@@ -669,110 +667,34 @@ public class MultiTimeframeRSI extends Study {
         }
         
         // Need enough data for normalization
-        if (index < lookback / 2) {
-            return currentRsi;
-        }
-        
-        // Get min/max keys for this RSI (only RSI 3,4,5 have them)
-        Values minKey = MIN_VALUES[rsiIndex];
-        Values maxKey = MAX_VALUES[rsiIndex];
-        
-        // If no min/max keys defined, do full scan (RSI 1,2 don't need normalization usually)
-        if (minKey == null || maxKey == null) {
-            return doFullScanNormalize(series, index, rawRsiKey, lookback, currentRsi);
-        }
-        
-        double minRsi, maxRsi;
-        
-        // Try to use incremental update from previous bar
-        if (index > 0) {
-            double prevMin = series.getDouble(index - 1, minKey, Double.NaN);
-            double prevMax = series.getDouble(index - 1, maxKey, Double.NaN);
-            
-            if (!Double.isNaN(prevMin) && !Double.isNaN(prevMax) && prevMin < 101) {
-                // Incremental update
-                minRsi = Math.min(prevMin, currentRsi);
-                maxRsi = Math.max(prevMax, currentRsi);
-                
-                // Check if old value exits window - need rescan
-                int oldIndex = index - lookback;
-                if (oldIndex >= 0) {
-                    double oldRsi = series.getDouble(oldIndex, rawRsiKey, Double.NaN);
-                    if (!Double.isNaN(oldRsi) && (oldRsi <= minRsi || oldRsi >= maxRsi)) {
-                        // Rescan needed - old value was min or max
-                        minRsi = 100.0;
-                        maxRsi = 0.0;
-                        int actualLookback = Math.min(lookback, index + 1);
-                        for (int i = 0; i < actualLookback; i++) {
-                            double rsi = series.getDouble(index - i, rawRsiKey, Double.NaN);
-                            if (!Double.isNaN(rsi)) {
-                                if (rsi < minRsi) minRsi = rsi;
-                                if (rsi > maxRsi) maxRsi = rsi;
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Full scan for first calculation
-                minRsi = 100.0;
-                maxRsi = 0.0;
-                int actualLookback = Math.min(lookback, index + 1);
-                for (int i = 0; i < actualLookback; i++) {
-                    double rsi = series.getDouble(index - i, rawRsiKey, Double.NaN);
-                    if (!Double.isNaN(rsi)) {
-                        if (rsi < minRsi) minRsi = rsi;
-                        if (rsi > maxRsi) maxRsi = rsi;
-                    }
-                }
-            }
-        } else {
-            minRsi = currentRsi;
-            maxRsi = currentRsi;
-        }
-        
-        // Store min/max for next bar's incremental update
-        series.setDouble(index, minKey, minRsi);
-        series.setDouble(index, maxKey, maxRsi);
-        
-        // Fallback if no valid data
-        if (minRsi > maxRsi) {
-            return currentRsi;
-        }
-        
-        // Calculate range with protection
-        double range = maxRsi - minRsi;
-        if (range < MIN_RANGE) {
-            range = MIN_RANGE;
-        }
-        
-        // Normalize
-        double normalized = ((currentRsi - minRsi) / range) * 100.0;
-        
-        // Clamp to 0-100
-        return Math.max(0.0, Math.min(100.0, normalized));
-    }
-    
-    /** Full scan normalization for RSIs without cached min/max */
-    private double doFullScanNormalize(DataSeries series, int index, Values rawRsiKey, 
-                                       int lookback, double currentRsi) {
-        double minRsi = 100.0;
-        double maxRsi = 0.0;
         int actualLookback = Math.min(lookback, index + 1);
+        if (actualLookback < 10) {
+            return currentRsi; // Not enough data, return raw
+        }
+        
+        // Count how many values are below current RSI (Percentile Ranking)
+        int countBelow = 0;
+        int validCount = 0;
         
         for (int i = 0; i < actualLookback; i++) {
             double rsi = series.getDouble(index - i, rawRsiKey, Double.NaN);
             if (!Double.isNaN(rsi)) {
-                if (rsi < minRsi) minRsi = rsi;
-                if (rsi > maxRsi) maxRsi = rsi;
+                validCount++;
+                if (rsi < currentRsi) {
+                    countBelow++;
+                }
             }
         }
         
-        if (minRsi > maxRsi) return currentRsi;
+        // Need at least some valid data
+        if (validCount < 5) {
+            return currentRsi;
+        }
         
-        double range = maxRsi - minRsi;
-        if (range < MIN_RANGE) range = MIN_RANGE;
+        // Percentile = (count below / total) * 100
+        double percentile = ((double) countBelow / validCount) * 100.0;
         
-        double normalized = ((currentRsi - minRsi) / range) * 100.0;
-        return Math.max(0.0, Math.min(100.0, normalized));
+        // Clamp to 0-100
+        return Math.max(0.0, Math.min(100.0, percentile));
     }
 }
