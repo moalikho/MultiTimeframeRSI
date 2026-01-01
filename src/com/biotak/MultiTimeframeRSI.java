@@ -8,26 +8,27 @@ import com.motivewave.platform.sdk.common.desc.*;
 import java.awt.Color;
 
 /**
- * Multi-Timeframe RSI Indicator
+ * Multi-Timeframe RSI Indicator with Adaptive Normalization
  * نمایش 5 RSI با دوره‌های مختلف به صورت همزمان
  * 
  * الگوریتم RSI (Wilder's Smoothing):
  * RSI = 100 - (100 / (1 + RS))
  * RS = Smoothed Average Gain / Smoothed Average Loss
  * 
- * Smoothing: EMA-style با alpha = 1/period
- * First value: Simple average of first N periods
- * Subsequent: ((prev * (period-1)) + current) / period
+ * الگوریتم نرمالایزیشن:
+ * normalized_RSI = ((RSI - min_RSI) / (max_RSI - min_RSI)) * 100
+ * - RSI های بلندمدت نوسان کمی دارن و نزدیک 50 میمونن
+ * - نرمالایزیشن باعث میشه نوسان کامل 0-100 داشته باشن
  * 
  * @author Biotak Development Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 @StudyHeader(
     namespace = "Biotak",
     id = "MTFRSI",
     name = "MTF RSI",
     label = "MTF RSI",
-    desc = "Multi-Timeframe RSI Oscillator - 5 Periods",
+    desc = "Multi-Timeframe RSI Oscillator with Adaptive Normalization",
     menu = "Biotak",
     overlay = false,
     studyOverlay = false
@@ -37,10 +38,18 @@ public class MultiTimeframeRSI extends Study {
     /** Enum برای مقادیر محاسبه شده */
     enum Values { 
         RSI1, RSI2, RSI3, RSI4, RSI5,
+        // Raw RSI values for normalization
+        RSI1_RAW, RSI2_RAW, RSI3_RAW, RSI4_RAW, RSI5_RAW,
         // Internal values for smoothed averages (not exported)
         AVG_GAIN1, AVG_LOSS1, AVG_GAIN2, AVG_LOSS2, AVG_GAIN3, AVG_LOSS3,
-        AVG_GAIN4, AVG_LOSS4, AVG_GAIN5, AVG_LOSS5
+        AVG_GAIN4, AVG_LOSS4, AVG_GAIN5, AVG_LOSS5,
+        // Min/Max values for normalization (internal)
+        RSI3_MIN, RSI3_MAX, RSI4_MIN, RSI4_MAX, RSI5_MIN, RSI5_MAX
     }
+    
+    // Min/Max keys mapping for normalization
+    private static final Values[] MIN_VALUES = {null, null, Values.RSI3_MIN, Values.RSI4_MIN, Values.RSI5_MIN};
+    private static final Values[] MAX_VALUES = {null, null, Values.RSI3_MAX, Values.RSI4_MAX, Values.RSI5_MAX};
     
     // ═══════════════════════════════════════════════════════════════════════════
     // THREAD-SAFE SETTINGS CACHE (Immutable Snapshot Pattern)
@@ -60,22 +69,29 @@ public class MultiTimeframeRSI extends Study {
             final int maxLookback;
             final boolean[] showFlags;
             final double[] rsiPeriods;
+            final boolean[] normalizeFlags;
+            final int normLookback;
             final int settingsHash;
             
             SettingsSnapshot(Settings settings) {
                 this.maxLookback = settings.getInteger("maxLookback", DEFAULT_MAX_LOOKBACK);
+                this.normLookback = settings.getInteger("normLookback", DEFAULT_NORM_LOOKBACK);
                 this.showFlags = new boolean[NUM_RSI];
                 this.rsiPeriods = new double[NUM_RSI];
+                this.normalizeFlags = new boolean[NUM_RSI];
                 
                 int hash = 17;
                 hash = 31 * hash + maxLookback;
+                hash = 31 * hash + normLookback;
                 
                 for (int i = 0; i < NUM_RSI; i++) {
                     showFlags[i] = settings.getBoolean(SHOW_KEYS[i], true);
                     rsiPeriods[i] = settings.getDouble(PERIOD_KEYS[i], DEFAULT_PERIODS[i]);
+                    normalizeFlags[i] = settings.getBoolean(NORM_KEYS[i], DEFAULT_NORMALIZE[i]);
                     
                     hash = 31 * hash + (showFlags[i] ? 1 : 0);
                     hash = 31 * hash + Double.hashCode(rsiPeriods[i]);
+                    hash = 31 * hash + (normalizeFlags[i] ? 1 : 0);
                 }
                 this.settingsHash = hash;
             }
@@ -124,9 +140,11 @@ public class MultiTimeframeRSI extends Study {
         private int computeQuickHash(Settings settings) {
             int hash = 17;
             hash = 31 * hash + settings.getInteger("maxLookback", DEFAULT_MAX_LOOKBACK);
+            hash = 31 * hash + settings.getInteger("normLookback", DEFAULT_NORM_LOOKBACK);
             for (int i = 0; i < NUM_RSI; i++) {
                 hash = 31 * hash + (settings.getBoolean(SHOW_KEYS[i], true) ? 1 : 0);
                 hash = 31 * hash + Double.hashCode(settings.getDouble(PERIOD_KEYS[i], DEFAULT_PERIODS[i]));
+                hash = 31 * hash + (settings.getBoolean(NORM_KEYS[i], DEFAULT_NORMALIZE[i]) ? 1 : 0);
             }
             return hash;
         }
@@ -238,19 +256,24 @@ public class MultiTimeframeRSI extends Study {
     private static final int NUM_RSI = 5;
     private static final String[] PERIOD_KEYS = {"period1", "period2", "period3", "period4", "period5"};
     private static final String[] SHOW_KEYS = {"show1", "show2", "show3", "show4", "show5"};
+    private static final String[] NORM_KEYS = {"norm1", "norm2", "norm3", "norm4", "norm5"};
     private static final Values[] RSI_VALUES = {Values.RSI1, Values.RSI2, Values.RSI3, Values.RSI4, Values.RSI5};
+    private static final Values[] RSI_RAW_VALUES = {Values.RSI1_RAW, Values.RSI2_RAW, Values.RSI3_RAW, Values.RSI4_RAW, Values.RSI5_RAW};
     private static final Values[] AVG_GAIN_VALUES = {Values.AVG_GAIN1, Values.AVG_GAIN2, Values.AVG_GAIN3, Values.AVG_GAIN4, Values.AVG_GAIN5};
     private static final Values[] AVG_LOSS_VALUES = {Values.AVG_LOSS1, Values.AVG_LOSS2, Values.AVG_LOSS3, Values.AVG_LOSS4, Values.AVG_LOSS5};
     
-    // Default periods: 7, 14, 21, 50, 100
-    private static final double[] DEFAULT_PERIODS = {7.0, 14.0, 21.0, 50.0, 100.0};
+    // Default periods: 5, 15, 30, 60, 240 (مثل Stochastic)
+    private static final double[] DEFAULT_PERIODS = {5.0, 15.0, 30.0, 60.0, 240.0};
     
-    // Reusable Color constants (reduce GC pressure)
+    // Default normalize flags: کوتاه‌مدت‌ها نه، بلندمدت‌ها آره
+    private static final boolean[] DEFAULT_NORMALIZE = {false, false, true, true, true};
+    
+    // Reusable Color constants (مثل Stochastic)
     private static final Color COLOR_FOREST_GREEN = new Color(40, 140, 60);
     private static final Color COLOR_BRIGHT_BLUE = new Color(70, 130, 220);
-    private static final Color COLOR_PURPLE = new Color(147, 112, 219);
     private static final Color COLOR_ORANGE = new Color(210, 130, 50);
-    private static final Color COLOR_DARK_GRAY = new Color(80, 80, 80);
+    private static final Color COLOR_DARK_GRAY = new Color(60, 60, 60);
+    private static final Color COLOR_MED_GRAY = new Color(100, 100, 100);
     private static final Color COLOR_LIGHT_GRAY = new Color(140, 140, 140);
     
     // Reusable dash patterns
@@ -275,6 +298,8 @@ public class MultiTimeframeRSI extends Study {
         new java.util.concurrent.atomic.AtomicReference<>(null);
     
     private static final int DEFAULT_MAX_LOOKBACK = 1000;
+    private static final int DEFAULT_NORM_LOOKBACK = 100;
+    private static final double MIN_RANGE = 10.0; // مثل MT4 - حداقل range برای نرمالایزیشن
     
     // ═══════════════════════════════════════════════════════════════════════════
     // PUBLIC API
@@ -315,41 +340,51 @@ public class MultiTimeframeRSI extends Study {
         perfGrp.addRow(new IntegerDescriptor("maxLookback", "Max Candles to Calculate (0 = All)", 
             DEFAULT_MAX_LOOKBACK, 0, 10000, 100));
         
-        // ⭐⭐⭐ PRIMARY: RSI 100 - Forest Green
-        var grp5 = tab.addGroup("⭐⭐⭐ PRIMARY: RSI 100");
+        // Normalization Settings
+        var normGrp = tab.addGroup("Normalization Settings");
+        normGrp.addRow(new IntegerDescriptor("normLookback", "Normalization Lookback Period", 
+            DEFAULT_NORM_LOOKBACK, 10, 500, 10));
+
+        // ⭐⭐⭐ PRIMARY: RSI 240 - Forest Green
+        var grp5 = tab.addGroup("⭐⭐⭐ PRIMARY: RSI 240");
         grp5.addRow(new BooleanDescriptor("show5", "Show RSI", true));
-        grp5.addRow(new DoubleDescriptor("period5", "Period", 100.0, 2.0, 500.0, 0.01));
+        grp5.addRow(new DoubleDescriptor("period5", "Period", 240.0, 2.0, 500.0, 0.01));
+        grp5.addRow(new BooleanDescriptor("norm5", "Normalize", true));
         grp5.addRow(new PathDescriptor("path5", "RSI Line", COLOR_FOREST_GREEN, 3.0f, null, true, true, true));
         
-        // ⭐⭐ SECONDARY: RSI 50 - Bright Blue
-        var grp4 = tab.addGroup("⭐⭐ SECONDARY: RSI 50");
+        // ⭐⭐ SECONDARY: RSI 60 - Bright Blue
+        var grp4 = tab.addGroup("⭐⭐ SECONDARY: RSI 60");
         grp4.addRow(new BooleanDescriptor("show4", "Show RSI", true));
-        grp4.addRow(new DoubleDescriptor("period4", "Period", 50.0, 2.0, 200.0, 0.01));
+        grp4.addRow(new DoubleDescriptor("period4", "Period", 60.0, 2.0, 300.0, 0.01));
+        grp4.addRow(new BooleanDescriptor("norm4", "Normalize", true));
         grp4.addRow(new PathDescriptor("path4", "RSI Line", COLOR_BRIGHT_BLUE, 2.5f, DASH_6_3, true, true, true));
         
-        // ⭐ TERTIARY: RSI 21 - Purple
-        var grp3 = tab.addGroup("⭐ TERTIARY: RSI 21");
+        // ⭐ TERTIARY: RSI 30 - Orange
+        var grp3 = tab.addGroup("⭐ TERTIARY: RSI 30");
         grp3.addRow(new BooleanDescriptor("show3", "Show RSI", true));
-        grp3.addRow(new DoubleDescriptor("period3", "Period", 21.0, 2.0, 100.0, 0.01));
-        grp3.addRow(new PathDescriptor("path3", "RSI Line", COLOR_PURPLE, 2.0f, DASH_4_3, true, true, true));
+        grp3.addRow(new DoubleDescriptor("period3", "Period", 30.0, 2.0, 100.0, 0.01));
+        grp3.addRow(new BooleanDescriptor("norm3", "Normalize", true));
+        grp3.addRow(new PathDescriptor("path3", "RSI Line", COLOR_ORANGE, 2.0f, DASH_4_3, true, true, true));
         
-        // Support: RSI 14 - Orange (Standard RSI)
-        var grp2 = tab.addGroup("Support: RSI 14 (Standard)");
+        // Support: RSI 15 - Medium Gray
+        var grp2 = tab.addGroup("Support: RSI 15");
         grp2.addRow(new BooleanDescriptor("show2", "Show RSI", true));
-        grp2.addRow(new DoubleDescriptor("period2", "Period", 14.0, 2.0, 100.0, 0.01));
-        grp2.addRow(new PathDescriptor("path2", "RSI Line", COLOR_ORANGE, 1.8f, null, true, true, true));
+        grp2.addRow(new DoubleDescriptor("period2", "Period", 15.0, 2.0, 100.0, 0.01));
+        grp2.addRow(new BooleanDescriptor("norm2", "Normalize", false));
+        grp2.addRow(new PathDescriptor("path2", "RSI Line", COLOR_MED_GRAY, 1.5f, DASH_2_4, true, true, true));
         
-        // Support: RSI 7 - Dark Gray (Fast)
-        var grp1 = tab.addGroup("Support: RSI 7 (Fast)");
+        // Support: RSI 5 - Dark Gray (Fast)
+        var grp1 = tab.addGroup("Support: RSI 5 (Fast)");
         grp1.addRow(new BooleanDescriptor("show1", "Show RSI", true));
-        grp1.addRow(new DoubleDescriptor("period1", "Period", 7.0, 2.0, 100.0, 0.01));
+        grp1.addRow(new DoubleDescriptor("period1", "Period", 5.0, 2.0, 100.0, 0.01));
+        grp1.addRow(new BooleanDescriptor("norm1", "Normalize", false));
         grp1.addRow(new PathDescriptor("path1", "RSI Line", COLOR_DARK_GRAY, 1.2f, DASH_2_4, true, false, true));
         
         // Guides Tab
         var guidesTab = sd.addTab("Guides");
         var guidesGrp = guidesTab.addGroup("Horizontal Levels");
         
-        GuideDescriptor upperGuide = new GuideDescriptor("upperGuide", "Overbought Level (70)", 70, 0, 100, 1, true);
+        GuideDescriptor upperGuide = new GuideDescriptor("upperGuide", "Overbought Level (80)", 80, 0, 100, 1, true);
         upperGuide.setLineColor(COLOR_LIGHT_GRAY);
         upperGuide.setDash(DASH_4_4);
         upperGuide.setWidth(1.0f);
@@ -361,7 +396,7 @@ public class MultiTimeframeRSI extends Study {
         middleGuide.setWidth(1.0f);
         guidesGrp.addRow(middleGuide);
         
-        GuideDescriptor lowerGuide = new GuideDescriptor("lowerGuide", "Oversold Level (30)", 30, 0, 100, 1, true);
+        GuideDescriptor lowerGuide = new GuideDescriptor("lowerGuide", "Oversold Level (20)", 20, 0, 100, 1, true);
         lowerGuide.setLineColor(COLOR_LIGHT_GRAY);
         lowerGuide.setDash(DASH_4_4);
         lowerGuide.setWidth(1.0f);
@@ -373,11 +408,11 @@ public class MultiTimeframeRSI extends Study {
         var desc = createRD();
         desc.setLabelSettings("period1", "period2", "period3", "period4", "period5");
         
-        desc.exportValue(new ValueDescriptor(Values.RSI1, "RSI (7)", KEY_P1));
-        desc.exportValue(new ValueDescriptor(Values.RSI2, "RSI (14)", KEY_P2));
-        desc.exportValue(new ValueDescriptor(Values.RSI3, "RSI (21)", KEY_P3));
-        desc.exportValue(new ValueDescriptor(Values.RSI4, "RSI (50)", KEY_P4));
-        desc.exportValue(new ValueDescriptor(Values.RSI5, "RSI (100)", KEY_P5));
+        desc.exportValue(new ValueDescriptor(Values.RSI1, "RSI (5)", KEY_P1));
+        desc.exportValue(new ValueDescriptor(Values.RSI2, "RSI (15)", KEY_P2));
+        desc.exportValue(new ValueDescriptor(Values.RSI3, "RSI (30)", KEY_P3));
+        desc.exportValue(new ValueDescriptor(Values.RSI4, "RSI (60)", KEY_P4));
+        desc.exportValue(new ValueDescriptor(Values.RSI5, "RSI (240)", KEY_P5));
         
         desc.declarePath(Values.RSI1, "path1");
         desc.declarePath(Values.RSI2, "path2");
@@ -467,10 +502,22 @@ public class MultiTimeframeRSI extends Study {
                     continue;
                 }
                 
-                // Calculate RSI using Wilder's smoothing method
-                double rsiValue = calculateRSI(series, index, period, 
+                // Calculate raw RSI using Wilder's smoothing method
+                double rawRsi = calculateRSI(series, index, period, 
                     AVG_GAIN_VALUES[i], AVG_LOSS_VALUES[i]);
-                series.setDouble(index, RSI_VALUES[i], rsiValue);
+                
+                // Store raw RSI for normalization lookback
+                series.setDouble(index, RSI_RAW_VALUES[i], rawRsi);
+                
+                // Apply normalization if enabled
+                double finalRsi;
+                if (settings.normalizeFlags[i] && !Double.isNaN(rawRsi)) {
+                    finalRsi = normalizeRSI(series, index, i, RSI_RAW_VALUES[i], settings.normLookback, rawRsi);
+                } else {
+                    finalRsi = rawRsi;
+                }
+                
+                series.setDouble(index, RSI_VALUES[i], finalRsi);
             }
             
             calculationState.markCalculated(index);
@@ -596,5 +643,135 @@ public class MultiTimeframeRSI extends Study {
         
         // Clamp to valid range [0, 100]
         return Math.max(0.0, Math.min(100.0, rsi));
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NORMALIZATION (Adaptive Scaling) - Optimized with Incremental Min/Max
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    /**
+     * نرمالایز کردن RSI برای نوسان کامل 0-100
+     * بهینه‌سازی شده با Incremental Min/Max (مثل MT4)
+     * 
+     * @param series      DataSeries
+     * @param index       اندیس جاری
+     * @param rsiIndex    شماره RSI (0-4)
+     * @param rawRsiKey   کلید RSI خام
+     * @param lookback    بازه lookback برای min/max
+     * @param currentRsi  مقدار RSI فعلی
+     * @return            RSI نرمالایز شده (0-100)
+     */
+    private double normalizeRSI(DataSeries series, int index, int rsiIndex, Values rawRsiKey, 
+                                int lookback, double currentRsi) {
+        if (Double.isNaN(currentRsi)) {
+            return Double.NaN;
+        }
+        
+        // Need enough data for normalization
+        if (index < lookback / 2) {
+            return currentRsi;
+        }
+        
+        // Get min/max keys for this RSI (only RSI 3,4,5 have them)
+        Values minKey = MIN_VALUES[rsiIndex];
+        Values maxKey = MAX_VALUES[rsiIndex];
+        
+        // If no min/max keys defined, do full scan (RSI 1,2 don't need normalization usually)
+        if (minKey == null || maxKey == null) {
+            return doFullScanNormalize(series, index, rawRsiKey, lookback, currentRsi);
+        }
+        
+        double minRsi, maxRsi;
+        
+        // Try to use incremental update from previous bar
+        if (index > 0) {
+            double prevMin = series.getDouble(index - 1, minKey, Double.NaN);
+            double prevMax = series.getDouble(index - 1, maxKey, Double.NaN);
+            
+            if (!Double.isNaN(prevMin) && !Double.isNaN(prevMax) && prevMin < 101) {
+                // Incremental update
+                minRsi = Math.min(prevMin, currentRsi);
+                maxRsi = Math.max(prevMax, currentRsi);
+                
+                // Check if old value exits window - need rescan
+                int oldIndex = index - lookback;
+                if (oldIndex >= 0) {
+                    double oldRsi = series.getDouble(oldIndex, rawRsiKey, Double.NaN);
+                    if (!Double.isNaN(oldRsi) && (oldRsi <= minRsi || oldRsi >= maxRsi)) {
+                        // Rescan needed - old value was min or max
+                        minRsi = 100.0;
+                        maxRsi = 0.0;
+                        int actualLookback = Math.min(lookback, index + 1);
+                        for (int i = 0; i < actualLookback; i++) {
+                            double rsi = series.getDouble(index - i, rawRsiKey, Double.NaN);
+                            if (!Double.isNaN(rsi)) {
+                                if (rsi < minRsi) minRsi = rsi;
+                                if (rsi > maxRsi) maxRsi = rsi;
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Full scan for first calculation
+                minRsi = 100.0;
+                maxRsi = 0.0;
+                int actualLookback = Math.min(lookback, index + 1);
+                for (int i = 0; i < actualLookback; i++) {
+                    double rsi = series.getDouble(index - i, rawRsiKey, Double.NaN);
+                    if (!Double.isNaN(rsi)) {
+                        if (rsi < minRsi) minRsi = rsi;
+                        if (rsi > maxRsi) maxRsi = rsi;
+                    }
+                }
+            }
+        } else {
+            minRsi = currentRsi;
+            maxRsi = currentRsi;
+        }
+        
+        // Store min/max for next bar's incremental update
+        series.setDouble(index, minKey, minRsi);
+        series.setDouble(index, maxKey, maxRsi);
+        
+        // Fallback if no valid data
+        if (minRsi > maxRsi) {
+            return currentRsi;
+        }
+        
+        // Calculate range with protection
+        double range = maxRsi - minRsi;
+        if (range < MIN_RANGE) {
+            range = MIN_RANGE;
+        }
+        
+        // Normalize
+        double normalized = ((currentRsi - minRsi) / range) * 100.0;
+        
+        // Clamp to 0-100
+        return Math.max(0.0, Math.min(100.0, normalized));
+    }
+    
+    /** Full scan normalization for RSIs without cached min/max */
+    private double doFullScanNormalize(DataSeries series, int index, Values rawRsiKey, 
+                                       int lookback, double currentRsi) {
+        double minRsi = 100.0;
+        double maxRsi = 0.0;
+        int actualLookback = Math.min(lookback, index + 1);
+        
+        for (int i = 0; i < actualLookback; i++) {
+            double rsi = series.getDouble(index - i, rawRsiKey, Double.NaN);
+            if (!Double.isNaN(rsi)) {
+                if (rsi < minRsi) minRsi = rsi;
+                if (rsi > maxRsi) maxRsi = rsi;
+            }
+        }
+        
+        if (minRsi > maxRsi) return currentRsi;
+        
+        double range = maxRsi - minRsi;
+        if (range < MIN_RANGE) range = MIN_RANGE;
+        
+        double normalized = ((currentRsi - minRsi) / range) * 100.0;
+        return Math.max(0.0, Math.min(100.0, normalized));
     }
 }
