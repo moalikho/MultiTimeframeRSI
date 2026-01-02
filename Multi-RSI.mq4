@@ -101,7 +101,7 @@ input color OverboughtColor=clrYellow;            //Overbought Color
 input color OversoldColor=clrRed;                 //Oversold Color
 
 input string CommentMethod="===================";   //RSI Calculation Method
-enum ENUM_RSI_METHOD { RSI_EMA=0, RSI_SMMA=1, RSI_SMA=2 };
+enum ENUM_RSI_METHOD { RSI_EMA=0, RSI_SMMA=1, RSI_SMA=2, RSI_WMA=3 };
 input ENUM_RSI_METHOD RSI_Method=RSI_EMA;         //Method (EMA=MotiveWave, SMMA=Wilder)
 
 input string Comment4="========================";   //Display Options
@@ -162,14 +162,13 @@ double CalculateRSI(int index, int period, ENUM_APPLIED_PRICE appliedPrice,
    // Check if we have previous values
    if(avgGain[index + 1] == EMPTY_VALUE || avgLoss[index + 1] == EMPTY_VALUE)
    {
-      // First calculation - simple average
+      // First calculation - simple average (like Java: from oldest to newest)
       double sumGain = 0, sumLoss = 0;
-      for(int i = 0; i < period; i++)
+      for(int i = index + period - 1; i >= index; i--)
       {
-         int idx = index + i;
-         if(idx >= Bars - 1) continue;
-         double c = GetPrice(appliedPrice, idx);
-         double p = GetPrice(appliedPrice, idx + 1);
+         if(i >= Bars - 1 || i < 0) continue;
+         double c = GetPrice(appliedPrice, i);
+         double p = GetPrice(appliedPrice, i + 1);
          if(c == 0 || p == 0) continue;
          double chg = c - p;
          if(chg > 0) sumGain += chg;
@@ -188,14 +187,13 @@ double CalculateRSI(int index, int period, ENUM_APPLIED_PRICE appliedPrice,
       {
          case RSI_SMA:
          {
-            // SMA: recalculate full average
+            // SMA: recalculate full average (like Java: from oldest to newest)
             double sumGain = 0, sumLoss = 0;
-            for(int i = 0; i < period; i++)
+            for(int i = index + period - 1; i >= index; i--)
             {
-               int idx = index + i;
-               if(idx >= Bars - 1) continue;
-               double c = GetPrice(appliedPrice, idx);
-               double p = GetPrice(appliedPrice, idx + 1);
+               if(i >= Bars - 1 || i < 0) continue;
+               double c = GetPrice(appliedPrice, i);
+               double p = GetPrice(appliedPrice, i + 1);
                if(c == 0 || p == 0) continue;
                double chg = c - p;
                if(chg > 0) sumGain += chg;
@@ -203,6 +201,27 @@ double CalculateRSI(int index, int period, ENUM_APPLIED_PRICE appliedPrice,
             }
             ag = sumGain / period;
             al = sumLoss / period;
+            break;
+         }
+         case RSI_WMA:
+         {
+            // WMA: Weighted Moving Average (like Java: oldest=weight 1, newest=weight period)
+            double wSumGain = 0, wSumLoss = 0, wSum = 0;
+            int weight = 1;
+            for(int i = index + period - 1; i >= index; i--)
+            {
+               if(i >= Bars - 1 || i < 0) { weight++; continue; }
+               double c = GetPrice(appliedPrice, i);
+               double p = GetPrice(appliedPrice, i + 1);
+               if(c == 0 || p == 0) { weight++; continue; }
+               double chg = c - p;
+               if(chg > 0) wSumGain += chg * weight;
+               else wSumLoss += (-chg) * weight;
+               wSum += weight;
+               weight++;
+            }
+            ag = (wSum > 0) ? wSumGain / wSum : 0;
+            al = (wSum > 0) ? wSumLoss / wSum : 0;
             break;
          }
          case RSI_SMMA:
@@ -318,12 +337,7 @@ int OnInit()
    else
       SetIndexStyle(4, DRAW_NONE);
 
-   // Initialize helper buffers for custom RSI calculation
-   ArraySetAsSeries(AvgGain1, true); ArraySetAsSeries(AvgLoss1, true);
-   ArraySetAsSeries(AvgGain2, true); ArraySetAsSeries(AvgLoss2, true);
-   ArraySetAsSeries(AvgGain3, true); ArraySetAsSeries(AvgLoss3, true);
-   ArraySetAsSeries(AvgGain4, true); ArraySetAsSeries(AvgLoss4, true);
-   ArraySetAsSeries(AvgGain5, true); ArraySetAsSeries(AvgLoss5, true);
+   // Note: Helper buffers (AvgGain/AvgLoss) are initialized in OnCalculate after resize
 
    // Create toggle buttons
    if(ShowToggleButtons)
@@ -355,12 +369,25 @@ int OnCalculate(const int rates_total,
    int minBars = MathMax(RSI5_Period, 150);
    if(rates_total < minBars) return(0);
 
-   // Resize helper buffers
-   ArrayResize(AvgGain1, rates_total); ArrayResize(AvgLoss1, rates_total);
-   ArrayResize(AvgGain2, rates_total); ArrayResize(AvgLoss2, rates_total);
-   ArrayResize(AvgGain3, rates_total); ArrayResize(AvgLoss3, rates_total);
-   ArrayResize(AvgGain4, rates_total); ArrayResize(AvgLoss4, rates_total);
-   ArrayResize(AvgGain5, rates_total); ArrayResize(AvgLoss5, rates_total);
+   // Resize helper buffers only when needed
+   static int lastRatesTotal = 0;
+   if(rates_total != lastRatesTotal)
+   {
+      ArrayResize(AvgGain1, rates_total); ArrayResize(AvgLoss1, rates_total);
+      ArrayResize(AvgGain2, rates_total); ArrayResize(AvgLoss2, rates_total);
+      ArrayResize(AvgGain3, rates_total); ArrayResize(AvgLoss3, rates_total);
+      ArrayResize(AvgGain4, rates_total); ArrayResize(AvgLoss4, rates_total);
+      ArrayResize(AvgGain5, rates_total); ArrayResize(AvgLoss5, rates_total);
+      
+      // Set as series only after resize
+      ArraySetAsSeries(AvgGain1, true); ArraySetAsSeries(AvgLoss1, true);
+      ArraySetAsSeries(AvgGain2, true); ArraySetAsSeries(AvgLoss2, true);
+      ArraySetAsSeries(AvgGain3, true); ArraySetAsSeries(AvgLoss3, true);
+      ArraySetAsSeries(AvgGain4, true); ArraySetAsSeries(AvgLoss4, true);
+      ArraySetAsSeries(AvgGain5, true); ArraySetAsSeries(AvgLoss5, true);
+      
+      lastRatesTotal = rates_total;
+   }
 
    // Initialize on first run
    if(prev_calculated == 0)
@@ -377,75 +404,41 @@ int OnCalculate(const int rates_total,
    if(prev_calculated == 0)
       limit = rates_total - RSI5_Period - 10;
    else
-      limit = 2;
+   {
+      // New bar arrived: recalculate bar 0 and bar 1 (just closed)
+      // Same tick: only bar 0
+      int newBars = rates_total - prev_calculated;
+      limit = (newBars > 0) ? 1 : 0;
+   }
 
-   // Determine Applied Prices to use
-   ENUM_APPLIED_PRICE ap1 = UseIndividualPrice ? RSI1_AppliedPrice : GlobalAppliedPrice;
-   ENUM_APPLIED_PRICE ap2 = UseIndividualPrice ? RSI2_AppliedPrice : GlobalAppliedPrice;
-   ENUM_APPLIED_PRICE ap3 = UseIndividualPrice ? RSI3_AppliedPrice : GlobalAppliedPrice;
-   ENUM_APPLIED_PRICE ap4 = UseIndividualPrice ? RSI4_AppliedPrice : GlobalAppliedPrice;
-   ENUM_APPLIED_PRICE ap5 = UseIndividualPrice ? RSI5_AppliedPrice : GlobalAppliedPrice;
+   // Determine Applied Prices (cached)
+   static ENUM_APPLIED_PRICE ap1, ap2, ap3, ap4, ap5;
+   static bool pricesCached = false;
+   if(!pricesCached || prev_calculated == 0)
+   {
+      ap1 = UseIndividualPrice ? RSI1_AppliedPrice : GlobalAppliedPrice;
+      ap2 = UseIndividualPrice ? RSI2_AppliedPrice : GlobalAppliedPrice;
+      ap3 = UseIndividualPrice ? RSI3_AppliedPrice : GlobalAppliedPrice;
+      ap4 = UseIndividualPrice ? RSI4_AppliedPrice : GlobalAppliedPrice;
+      ap5 = UseIndividualPrice ? RSI5_AppliedPrice : GlobalAppliedPrice;
+      pricesCached = true;
+   }
 
    // Calculate only necessary bars (from oldest to newest)
    for(int i = limit; i >= 0; i--)
    {
-      // RSI 1
-      if(g_ShowRSI1 || ShowDataOnChart)
-         RSI1_Buffer[i] = CalculateRSI(i, RSI1_Period, ap1, AvgGain1, AvgLoss1);
-      else
-         RSI1_Buffer[i] = EMPTY_VALUE;
-
-      // RSI 2
-      if(g_ShowRSI2 || ShowDataOnChart)
-         RSI2_Buffer[i] = CalculateRSI(i, RSI2_Period, ap2, AvgGain2, AvgLoss2);
-      else
-         RSI2_Buffer[i] = EMPTY_VALUE;
-
-      // RSI 3
-      if(g_ShowRSI3 || ShowDataOnChart)
-         RSI3_Buffer[i] = CalculateRSI(i, RSI3_Period, ap3, AvgGain3, AvgLoss3);
-      else
-         RSI3_Buffer[i] = EMPTY_VALUE;
-
-      // RSI 4
-      if(g_ShowRSI4 || ShowDataOnChart)
-         RSI4_Buffer[i] = CalculateRSI(i, RSI4_Period, ap4, AvgGain4, AvgLoss4);
-      else
-         RSI4_Buffer[i] = EMPTY_VALUE;
-
-      // RSI 5
-      if(g_ShowRSI5 || ShowDataOnChart)
-         RSI5_Buffer[i] = CalculateRSI(i, RSI5_Period, ap5, AvgGain5, AvgLoss5);
-      else
-         RSI5_Buffer[i] = EMPTY_VALUE;
+      RSI1_Buffer[i] = CalculateRSI(i, RSI1_Period, ap1, AvgGain1, AvgLoss1);
+      RSI2_Buffer[i] = CalculateRSI(i, RSI2_Period, ap2, AvgGain2, AvgLoss2);
+      RSI3_Buffer[i] = CalculateRSI(i, RSI3_Period, ap3, AvgGain3, AvgLoss3);
+      RSI4_Buffer[i] = CalculateRSI(i, RSI4_Period, ap4, AvgGain4, AvgLoss4);
+      RSI5_Buffer[i] = CalculateRSI(i, RSI5_Period, ap5, AvgGain5, AvgLoss5);
    }
 
-   // Optimize: Update UI only when needed
-   static datetime lastBar = 0;
-   static int tickCounter = 0;
-   bool newBar = (time[0] != lastBar);
-
-   if(newBar)
-   {
-      lastBar = time[0];
-      tickCounter = 0;
-      if(UseDynamicColors)
-         ApplyDynamicColors();
-      if(ShowDataOnChart)
-         DisplayDataOnChart();
-   }
-   else
-   {
-      tickCounter++;
-      if(tickCounter >= 5)
-      {
-         if(UseDynamicColors)
-            ApplyDynamicColors();
-         if(ShowDataOnChart)
-            DisplayDataOnChart();
-         tickCounter = 0;
-      }
-   }
+   // Update UI every tick
+   if(UseDynamicColors)
+      ApplyDynamicColors();
+   if(ShowDataOnChart)
+      DisplayDataOnChart();
 
    return(rates_total);
 }
@@ -456,54 +449,67 @@ int OnCalculate(const int rates_total,
 //+------------------------------------------------------------------+
 void ApplyDynamicColors()
 {
+   static int lastState1 = -1, lastState2 = -1, lastState3 = -1, lastState4 = -1, lastState5 = -1;
+   int state;
+   
    if(g_ShowRSI1)
    {
-      if(RSI1_Buffer[0] >= OverboughtLevel)
-         SetIndexStyle(0, DRAW_LINE, STYLE_DOT, 2, OverboughtColor);
-      else if(RSI1_Buffer[0] <= OversoldLevel)
-         SetIndexStyle(0, DRAW_LINE, STYLE_DOT, 2, OversoldColor);
-      else
-         SetIndexStyle(0, DRAW_LINE, STYLE_DOT, 1, RSI1_Color);
+      state = (RSI1_Buffer[0] >= OverboughtLevel) ? 1 : (RSI1_Buffer[0] <= OversoldLevel) ? 2 : 0;
+      if(state != lastState1)
+      {
+         if(state == 1) SetIndexStyle(0, DRAW_LINE, STYLE_DOT, 2, OverboughtColor);
+         else if(state == 2) SetIndexStyle(0, DRAW_LINE, STYLE_DOT, 2, OversoldColor);
+         else SetIndexStyle(0, DRAW_LINE, STYLE_DOT, 1, RSI1_Color);
+         lastState1 = state;
+      }
    }
 
    if(g_ShowRSI2)
    {
-      if(RSI2_Buffer[0] >= OverboughtLevel)
-         SetIndexStyle(1, DRAW_LINE, STYLE_DASH, 2, OverboughtColor);
-      else if(RSI2_Buffer[0] <= OversoldLevel)
-         SetIndexStyle(1, DRAW_LINE, STYLE_DASH, 2, OversoldColor);
-      else
-         SetIndexStyle(1, DRAW_LINE, STYLE_DASH, 1, RSI2_Color);
+      state = (RSI2_Buffer[0] >= OverboughtLevel) ? 1 : (RSI2_Buffer[0] <= OversoldLevel) ? 2 : 0;
+      if(state != lastState2)
+      {
+         if(state == 1) SetIndexStyle(1, DRAW_LINE, STYLE_DASH, 2, OverboughtColor);
+         else if(state == 2) SetIndexStyle(1, DRAW_LINE, STYLE_DASH, 2, OversoldColor);
+         else SetIndexStyle(1, DRAW_LINE, STYLE_DASH, 1, RSI2_Color);
+         lastState2 = state;
+      }
    }
 
    if(g_ShowRSI3)
    {
-      if(RSI3_Buffer[0] >= OverboughtLevel)
-         SetIndexStyle(2, DRAW_LINE, STYLE_SOLID, 3, OverboughtColor);
-      else if(RSI3_Buffer[0] <= OversoldLevel)
-         SetIndexStyle(2, DRAW_LINE, STYLE_SOLID, 3, OversoldColor);
-      else
-         SetIndexStyle(2, DRAW_LINE, STYLE_SOLID, 2, RSI3_Color);
+      state = (RSI3_Buffer[0] >= OverboughtLevel) ? 1 : (RSI3_Buffer[0] <= OversoldLevel) ? 2 : 0;
+      if(state != lastState3)
+      {
+         if(state == 1) SetIndexStyle(2, DRAW_LINE, STYLE_SOLID, 3, OverboughtColor);
+         else if(state == 2) SetIndexStyle(2, DRAW_LINE, STYLE_SOLID, 3, OversoldColor);
+         else SetIndexStyle(2, DRAW_LINE, STYLE_SOLID, 2, RSI3_Color);
+         lastState3 = state;
+      }
    }
 
    if(g_ShowRSI4)
    {
-      if(RSI4_Buffer[0] >= OverboughtLevel)
-         SetIndexStyle(3, DRAW_LINE, STYLE_DASH, 3, OverboughtColor);
-      else if(RSI4_Buffer[0] <= OversoldLevel)
-         SetIndexStyle(3, DRAW_LINE, STYLE_DASH, 3, OversoldColor);
-      else
-         SetIndexStyle(3, DRAW_LINE, STYLE_DASH, 2, RSI4_Color);
+      state = (RSI4_Buffer[0] >= OverboughtLevel) ? 1 : (RSI4_Buffer[0] <= OversoldLevel) ? 2 : 0;
+      if(state != lastState4)
+      {
+         if(state == 1) SetIndexStyle(3, DRAW_LINE, STYLE_DASH, 3, OverboughtColor);
+         else if(state == 2) SetIndexStyle(3, DRAW_LINE, STYLE_DASH, 3, OversoldColor);
+         else SetIndexStyle(3, DRAW_LINE, STYLE_DASH, 2, RSI4_Color);
+         lastState4 = state;
+      }
    }
 
    if(g_ShowRSI5)
    {
-      if(RSI5_Buffer[0] >= OverboughtLevel)
-         SetIndexStyle(4, DRAW_LINE, STYLE_SOLID, 3, OverboughtColor);
-      else if(RSI5_Buffer[0] <= OversoldLevel)
-         SetIndexStyle(4, DRAW_LINE, STYLE_SOLID, 3, OversoldColor);
-      else
-         SetIndexStyle(4, DRAW_LINE, STYLE_SOLID, 2, RSI5_Color);
+      state = (RSI5_Buffer[0] >= OverboughtLevel) ? 1 : (RSI5_Buffer[0] <= OversoldLevel) ? 2 : 0;
+      if(state != lastState5)
+      {
+         if(state == 1) SetIndexStyle(4, DRAW_LINE, STYLE_SOLID, 3, OverboughtColor);
+         else if(state == 2) SetIndexStyle(4, DRAW_LINE, STYLE_SOLID, 3, OversoldColor);
+         else SetIndexStyle(4, DRAW_LINE, STYLE_SOLID, 2, RSI5_Color);
+         lastState5 = state;
+      }
    }
 }
 
@@ -512,16 +518,30 @@ void ApplyDynamicColors()
 //+------------------------------------------------------------------+
 void DisplayDataOnChart()
 {
+   // Build object name (g_ChartPrefix may change on reinit)
    string objName = g_ChartPrefix + "RSIData";
-   string text = "\n";
+   
+   if(g_ChartPrefix == "") return;  // Safety check
+   
+   // Create object if not exists
+   if(ObjectFind(0, objName) < 0)
+   {
+      ObjectCreate(0, objName, OBJ_LABEL, ChartWindowFind(), 0, 0);
+      ObjectSetInteger(0, objName, OBJPROP_CORNER, CornerPosition);
+      ObjectSetInteger(0, objName, OBJPROP_XDISTANCE, 10);
+      ObjectSetInteger(0, objName, OBJPROP_YDISTANCE, 20);
+      ObjectSetInteger(0, objName, OBJPROP_COLOR, clrWhite);
+      ObjectSetInteger(0, objName, OBJPROP_FONTSIZE, 8);
+      ObjectSetString(0, objName, OBJPROP_FONT, "Courier New");
+   }
 
-   text += "=== MULTI-TIMEFRAME RSI ===\n";
+   // Build text
+   string text = "\n=== MULTI-TIMEFRAME RSI ===\n";
    text += StringFormat("RSI %d: %.1f\n", RSI1_Period, RSI1_Buffer[0]);
    text += StringFormat("RSI %d: %.1f\n", RSI2_Period, RSI2_Buffer[0]);
    text += StringFormat("RSI %d: %.1f\n", RSI3_Period, RSI3_Buffer[0]);
    text += StringFormat("RSI %d: %.1f\n", RSI4_Period, RSI4_Buffer[0]);
    text += StringFormat("RSI %d: %.1f\n", RSI5_Period, RSI5_Buffer[0]);
-   text += "\n";
 
    // Overbought/Oversold count
    int overbought = 0, oversold = 0;
@@ -538,22 +558,12 @@ void DisplayDataOnChart()
    if(RSI5_Buffer[0] <= OversoldLevel) oversold++;
    
    if(overbought >= 3)
-      text += "OVERBOUGHT (" + IntegerToString(overbought) + "/5)\n";
+      text += "\nOVERBOUGHT (" + IntegerToString(overbought) + "/5)";
    else if(oversold >= 3)
-      text += "OVERSOLD (" + IntegerToString(oversold) + "/5)\n";
+      text += "\nOVERSOLD (" + IntegerToString(oversold) + "/5)";
    else if(overbought >= 1 || oversold >= 1)
-      text += "DIVERGENCE POSSIBLE\n";
+      text += "\nDIVERGENCE POSSIBLE";
 
-   if(ObjectFind(0, objName) < 0)
-   {
-      ObjectCreate(0, objName, OBJ_LABEL, ChartWindowFind(), 0, 0);
-      ObjectSetInteger(0, objName, OBJPROP_CORNER, CornerPosition);
-      ObjectSetInteger(0, objName, OBJPROP_XDISTANCE, 10);
-      ObjectSetInteger(0, objName, OBJPROP_YDISTANCE, 20);
-      ObjectSetInteger(0, objName, OBJPROP_COLOR, clrWhite);
-      ObjectSetInteger(0, objName, OBJPROP_FONTSIZE, 8);
-      ObjectSetString(0, objName, OBJPROP_FONT, "Courier New");
-   }
    ObjectSetString(0, objName, OBJPROP_TEXT, text);
 }
 
@@ -797,32 +807,46 @@ void DeleteAllButtons()
 }
 
 //+------------------------------------------------------------------+
-//| Load State - Global Variables                                     |
+//| Load State - Global Variables (persists across MT4 restarts)      |
 //+------------------------------------------------------------------+
 void LoadState()
 {
-   if(GlobalVariableCheck("RSI1_" + Symbol()))
+   string prefix = "MTFRSI_" + Symbol() + "_" + IntegerToString(Period()) + "_";
+   
+   if(GlobalVariableCheck(prefix + "RSI1"))
    {
-      g_ShowRSI1 = (GlobalVariableGet("RSI1_" + Symbol()) > 0);
-      g_ShowRSI2 = (GlobalVariableGet("RSI2_" + Symbol()) > 0);
-      g_ShowRSI3 = (GlobalVariableGet("RSI3_" + Symbol()) > 0);
-      g_ShowRSI4 = (GlobalVariableGet("RSI4_" + Symbol()) > 0);
-      g_ShowRSI5 = (GlobalVariableGet("RSI5_" + Symbol()) > 0);
-      g_MenuExpanded = (GlobalVariableGet("RSI_MenuExpanded_" + Symbol()) > 0);
+      g_ShowRSI1 = (GlobalVariableGet(prefix + "RSI1") > 0);
+      g_ShowRSI2 = (GlobalVariableGet(prefix + "RSI2") > 0);
+      g_ShowRSI3 = (GlobalVariableGet(prefix + "RSI3") > 0);
+      g_ShowRSI4 = (GlobalVariableGet(prefix + "RSI4") > 0);
+      g_ShowRSI5 = (GlobalVariableGet(prefix + "RSI5") > 0);
+      g_MenuExpanded = (GlobalVariableGet(prefix + "MenuExpanded") > 0);
+   }
+   else
+   {
+      // First run - use input defaults
+      g_ShowRSI1 = ShowRSI1;
+      g_ShowRSI2 = ShowRSI2;
+      g_ShowRSI3 = ShowRSI3;
+      g_ShowRSI4 = ShowRSI4;
+      g_ShowRSI5 = ShowRSI5;
+      g_MenuExpanded = false;
    }
 }
 
 //+------------------------------------------------------------------+
-//| Save State - Global Variables                                     |
+//| Save State - Global Variables (persists across MT4 restarts)      |
 //+------------------------------------------------------------------+
 void SaveState()
 {
-   GlobalVariableSet("RSI1_" + Symbol(), g_ShowRSI1 ? 1 : 0);
-   GlobalVariableSet("RSI2_" + Symbol(), g_ShowRSI2 ? 1 : 0);
-   GlobalVariableSet("RSI3_" + Symbol(), g_ShowRSI3 ? 1 : 0);
-   GlobalVariableSet("RSI4_" + Symbol(), g_ShowRSI4 ? 1 : 0);
-   GlobalVariableSet("RSI5_" + Symbol(), g_ShowRSI5 ? 1 : 0);
-   GlobalVariableSet("RSI_MenuExpanded_" + Symbol(), g_MenuExpanded ? 1 : 0);
+   string prefix = "MTFRSI_" + Symbol() + "_" + IntegerToString(Period()) + "_";
+   
+   GlobalVariableSet(prefix + "RSI1", g_ShowRSI1 ? 1 : 0);
+   GlobalVariableSet(prefix + "RSI2", g_ShowRSI2 ? 1 : 0);
+   GlobalVariableSet(prefix + "RSI3", g_ShowRSI3 ? 1 : 0);
+   GlobalVariableSet(prefix + "RSI4", g_ShowRSI4 ? 1 : 0);
+   GlobalVariableSet(prefix + "RSI5", g_ShowRSI5 ? 1 : 0);
+   GlobalVariableSet(prefix + "MenuExpanded", g_MenuExpanded ? 1 : 0);
 }
 
 //+------------------------------------------------------------------+
@@ -830,21 +854,19 @@ void SaveState()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
+   // Always save state before cleanup
    SaveState();
 
+   // Clean up chart objects
    ObjectDelete(0, g_ChartPrefix + "RSIData");
    DeleteAllButtons();
 
-   // Clean up Global Variables when indicator is removed
-   if(reason == 1)
-   {
-      GlobalVariableDel("RSI1_" + Symbol());
-      GlobalVariableDel("RSI2_" + Symbol());
-      GlobalVariableDel("RSI3_" + Symbol());
-      GlobalVariableDel("RSI4_" + Symbol());
-      GlobalVariableDel("RSI5_" + Symbol());
-      GlobalVariableDel("RSI_MenuExpanded_" + Symbol());
-   }
+   // Only delete GlobalVariables when indicator is manually removed (not on timeframe change or MT4 close)
+   // REASON_REMOVE = 1, but we keep data for MT4 restart
+   // REASON_CHARTCHANGE = 3 (timeframe change) - keep data
+   // REASON_CLOSE = 4 (MT4 closing) - keep data
+   // Only delete on explicit removal AND user confirmation would be needed
+   // For now, keep all data to persist across restarts
 }
 
 
