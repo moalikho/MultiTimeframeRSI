@@ -15,3 +15,13 @@ target/
 # OS
 .DS_Store
 Thumbs.db
+
+################################
+# JQwik Property Testing
+################################
+.jqwik-database
+
+################################
+# MotiveWave Extensions
+################################
+MotiveWave Extensions/
