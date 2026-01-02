@@ -405,6 +405,7 @@ public class MultiTimeframeRSI extends Study {
                     avgLoss = sumLoss / period;
                     break;
                 case SMMA:
+                    // SMMA formula (alternative form of Wilder's)
                     avgGain = ((prevAvgGain * (period - 1.0)) + currentGain) / period;
                     avgLoss = ((prevAvgLoss * (period - 1.0)) + currentLoss) / period;
                     break;
@@ -425,8 +426,9 @@ public class MultiTimeframeRSI extends Study {
                     avgGain = wSum > 0 ? wSumGain / wSum : 0;
                     avgLoss = wSum > 0 ? wSumLoss / wSum : 0;
                     break;
-                default: // EMA
-                    double alpha = 2.0 / (period + 1.0);
+                default: // EMA - Wilder's RMA (alpha = 1/period)
+                    // This is what TradingView and standard RSI use
+                    double alpha = 1.0 / period;
                     avgGain = (alpha * currentGain) + ((1.0 - alpha) * prevAvgGain);
                     avgLoss = (alpha * currentLoss) + ((1.0 - alpha) * prevAvgLoss);
                     break;

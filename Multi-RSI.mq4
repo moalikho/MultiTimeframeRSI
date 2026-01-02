@@ -60,54 +60,65 @@
 //+------------------------------------------------------------------+
 //| Input Parameters                                                  |
 //+------------------------------------------------------------------+
-input string Comment1="========================";   //RSI Periods
-input ENUM_APPLIED_PRICE GlobalAppliedPrice=PRICE_CLOSE; //Global Applied Price (All)
-input bool UseIndividualPrice=false;              //Use Individual Applied Prices
+input string Comment0="════════════════════════";   //═══ CALCULATION METHOD ═══
+enum ENUM_RSI_METHOD { RSI_RMA=0, RSI_EMA=1, RSI_SMA=2, RSI_WMA=3 };
+input ENUM_RSI_METHOD RSI_Method=RSI_RMA;         //Method (RMA=Wilder/MotiveWave)
+input ENUM_APPLIED_PRICE GlobalAppliedPrice=PRICE_CLOSE; //Applied Price (All RSIs)
 
-input int RSI1_Period=5;                          //RSI 1 Period
-input ENUM_APPLIED_PRICE RSI1_AppliedPrice=PRICE_CLOSE; //RSI 1 Applied Price (if Individual)
+input string Comment1="════════════════════════";   //═══ RSI 1 SETTINGS ═══
+input int RSI1_Period=5;                          //Period
+input color RSI1_Color=0x3C3C3C;                  //Color (Dark Gray)
+input int RSI1_Width=1;                           //Width (1-5)
+input ENUM_LINE_STYLE RSI1_Style=STYLE_DOT;       //Style
+input bool ShowRSI1=true;                         //Show
 
-input int RSI2_Period=15;                         //RSI 2 Period
-input ENUM_APPLIED_PRICE RSI2_AppliedPrice=PRICE_CLOSE; //RSI 2 Applied Price (if Individual)
+input string Comment2="════════════════════════";   //═══ RSI 2 SETTINGS ═══
+input int RSI2_Period=15;                         //Period
+input color RSI2_Color=0x1414F0;                  //Color (Red)
+input int RSI2_Width=1;                           //Width (1-5)
+input ENUM_LINE_STYLE RSI2_Style=STYLE_DASH;      //Style
+input bool ShowRSI2=true;                         //Show
 
-input int RSI3_Period=30;                         //RSI 3 Period
-input ENUM_APPLIED_PRICE RSI3_AppliedPrice=PRICE_CLOSE; //RSI 3 Applied Price (if Individual)
+input string Comment3="════════════════════════";   //═══ RSI 3 SETTINGS ═══
+input int RSI3_Period=30;                         //Period
+input color RSI3_Color=0xFF0000;                  //Color (Blue)
+input int RSI3_Width=2;                           //Width (1-5)
+input ENUM_LINE_STYLE RSI3_Style=STYLE_SOLID;     //Style
+input bool ShowRSI3=true;                         //Show
 
-input int RSI4_Period=60;                         //RSI 4 Period
-input ENUM_APPLIED_PRICE RSI4_AppliedPrice=PRICE_CLOSE; //RSI 4 Applied Price (if Individual)
+input string Comment4="════════════════════════";   //═══ RSI 4 SETTINGS ═══
+input int RSI4_Period=60;                         //Period
+input color RSI4_Color=0x282828;                  //Color (Black)
+input int RSI4_Width=3;                           //Width (1-5)
+input ENUM_LINE_STYLE RSI4_Style=STYLE_DASH;      //Style
+input bool ShowRSI4=true;                         //Show
 
-input int RSI5_Period=240;                        //RSI 5 Period
-input ENUM_APPLIED_PRICE RSI5_AppliedPrice=PRICE_CLOSE; //RSI 5 Applied Price (if Individual)
+input string Comment5="════════════════════════";   //═══ RSI 5 SETTINGS ═══
+input int RSI5_Period=240;                        //Period
+input color RSI5_Color=0x3C8C28;                  //Color (Green)
+input int RSI5_Width=3;                           //Width (1-5)
+input ENUM_LINE_STYLE RSI5_Style=STYLE_SOLID;     //Style
+input bool ShowRSI5=true;                         //Show
 
-input string CommentColors="===================";   //Line Colors
-input color RSI1_Color=0x3C3C3C;                  //RSI 5 Color (Dark Gray)
-input color RSI2_Color=0x1414F0;                  //RSI 15 Color (Red)
-input color RSI3_Color=0xFF0000;                  //RSI 30 Color (Blue)
-input color RSI4_Color=0x282828;                  //RSI 60 Color (Black)
-input color RSI5_Color=0x3C8C28;                  //RSI 240 Color (Green)
-
-input string Comment2="========================";   //Display Settings
-input bool ShowRSI1=true;                         //Show RSI 5
-input bool ShowRSI2=true;                         //Show RSI 15
-input bool ShowRSI3=true;                         //Show RSI 30
-input bool ShowRSI4=true;                         //Show RSI 60
-input bool ShowRSI5=true;                         //Show RSI 240
-
-input string Comment3="========================";   //Overbought/Oversold
+input string Comment6="════════════════════════";   //═══ OVERBOUGHT/OVERSOLD ═══
 input double OverboughtLevel=80;                  //Overbought Level
 input double OversoldLevel=20;                    //Oversold Level
-input bool UseDynamicColors=false;                //Dynamic Colors (OFF by default)
+input bool UseDynamicColors=false;                //Dynamic Colors
 input color OverboughtColor=clrYellow;            //Overbought Color
 input color OversoldColor=clrRed;                 //Oversold Color
 
-input string CommentMethod="===================";   //RSI Calculation Method
-enum ENUM_RSI_METHOD { RSI_EMA=0, RSI_SMMA=1, RSI_SMA=2, RSI_WMA=3 };
-input ENUM_RSI_METHOD RSI_Method=RSI_EMA;         //Method (EMA=MotiveWave, SMMA=Wilder)
-
-input string Comment4="========================";   //Display Options
+input string Comment7="════════════════════════";   //═══ DISPLAY OPTIONS ═══
 input bool ShowDataOnChart=true;                  //Show Values on Chart
 input int CornerPosition=1;                       //Corner (0=TL,1=TR,2=BL,3=BR)
 input bool ShowToggleButtons=true;                //Show Toggle Buttons
+
+input string Comment8="════════════════════════";   //═══ ADVANCED ═══
+input bool UseIndividualPrice=false;              //Use Individual Applied Prices
+input ENUM_APPLIED_PRICE RSI1_AppliedPrice=PRICE_CLOSE; //RSI 1 Applied Price
+input ENUM_APPLIED_PRICE RSI2_AppliedPrice=PRICE_CLOSE; //RSI 2 Applied Price
+input ENUM_APPLIED_PRICE RSI3_AppliedPrice=PRICE_CLOSE; //RSI 3 Applied Price
+input ENUM_APPLIED_PRICE RSI4_AppliedPrice=PRICE_CLOSE; //RSI 4 Applied Price
+input ENUM_APPLIED_PRICE RSI5_AppliedPrice=PRICE_CLOSE; //RSI 5 Applied Price
 
 //+------------------------------------------------------------------+
 //| Buffers                                                           |
@@ -118,12 +129,19 @@ double RSI3_Buffer[];
 double RSI4_Buffer[];
 double RSI5_Buffer[];
 
-// Buffers for custom RSI calculation (gain/loss averages)
-double AvgGain1[], AvgLoss1[];
-double AvgGain2[], AvgLoss2[];
-double AvgGain3[], AvgLoss3[];
-double AvgGain4[], AvgLoss4[];
-double AvgGain5[], AvgLoss5[];
+// State for incremental RSI calculation (non-series arrays - index 0 = oldest)
+// We only need to store the last calculated AvgGain/AvgLoss for each RSI
+double g_LastAvgGain1, g_LastAvgLoss1;
+double g_LastAvgGain2, g_LastAvgLoss2;
+double g_LastAvgGain3, g_LastAvgLoss3;
+double g_LastAvgGain4, g_LastAvgLoss4;
+double g_LastAvgGain5, g_LastAvgLoss5;
+
+// Track last calculated bar time to detect new bars
+datetime g_LastBarTime = 0;
+
+// Track if initial calculation is done
+bool g_InitialCalcDone = false;
 
 // Global toggle states (modifiable)
 bool g_ShowRSI1 = true;
@@ -141,16 +159,23 @@ ulong g_LastMenuClickMs = 0;
 // Unique identifier for this chart
 string g_ChartPrefix = "";
 
+// Arrays for RSI calculation state (non-series - index from old to new)
+double AvgGain1[], AvgLoss1[];
+double AvgGain2[], AvgLoss2[];
+double AvgGain3[], AvgLoss3[];
+double AvgGain4[], AvgLoss4[];
+double AvgGain5[], AvgLoss5[];
+
 //+------------------------------------------------------------------+
-//| Custom RSI Calculation with selectable method                     |
+//| Calculate RSI using stored state                                  |
 //+------------------------------------------------------------------+
-double CalculateRSI(int index, int period, ENUM_APPLIED_PRICE appliedPrice,
+double CalculateRSI(int barIndex, int period, ENUM_APPLIED_PRICE appliedPrice,
                     double &avgGain[], double &avgLoss[])
 {
-   if(index >= Bars - period) return EMPTY_VALUE;
+   if(barIndex >= Bars - period - 1) return EMPTY_VALUE;
    
-   double currentClose = GetPrice(appliedPrice, index);
-   double prevClose = GetPrice(appliedPrice, index + 1);
+   double currentClose = GetPrice(appliedPrice, barIndex);
+   double prevClose = GetPrice(appliedPrice, barIndex + 1);
    if(currentClose == 0 || prevClose == 0) return EMPTY_VALUE;
    
    double change = currentClose - prevClose;
@@ -160,11 +185,11 @@ double CalculateRSI(int index, int period, ENUM_APPLIED_PRICE appliedPrice,
    double ag, al;
    
    // Check if we have previous values
-   if(avgGain[index + 1] == EMPTY_VALUE || avgLoss[index + 1] == EMPTY_VALUE)
+   if(avgGain[barIndex + 1] == EMPTY_VALUE || avgLoss[barIndex + 1] == EMPTY_VALUE)
    {
-      // First calculation - simple average (like Java: from oldest to newest)
+      // First calculation - simple average
       double sumGain = 0, sumLoss = 0;
-      for(int i = index + period - 1; i >= index; i--)
+      for(int i = barIndex + period - 1; i >= barIndex; i--)
       {
          if(i >= Bars - 1 || i < 0) continue;
          double c = GetPrice(appliedPrice, i);
@@ -179,17 +204,15 @@ double CalculateRSI(int index, int period, ENUM_APPLIED_PRICE appliedPrice,
    }
    else
    {
-      // Apply selected smoothing method
-      double prevAG = avgGain[index + 1];
-      double prevAL = avgLoss[index + 1];
+      double prevAG = avgGain[barIndex + 1];
+      double prevAL = avgLoss[barIndex + 1];
       
       switch(RSI_Method)
       {
          case RSI_SMA:
          {
-            // SMA: recalculate full average (like Java: from oldest to newest)
             double sumGain = 0, sumLoss = 0;
-            for(int i = index + period - 1; i >= index; i--)
+            for(int i = barIndex + period - 1; i >= barIndex; i--)
             {
                if(i >= Bars - 1 || i < 0) continue;
                double c = GetPrice(appliedPrice, i);
@@ -205,10 +228,9 @@ double CalculateRSI(int index, int period, ENUM_APPLIED_PRICE appliedPrice,
          }
          case RSI_WMA:
          {
-            // WMA: Weighted Moving Average (like Java: oldest=weight 1, newest=weight period)
             double wSumGain = 0, wSumLoss = 0, wSum = 0;
             int weight = 1;
-            for(int i = index + period - 1; i >= index; i--)
+            for(int i = barIndex + period - 1; i >= barIndex; i--)
             {
                if(i >= Bars - 1 || i < 0) { weight++; continue; }
                double c = GetPrice(appliedPrice, i);
@@ -224,17 +246,16 @@ double CalculateRSI(int index, int period, ENUM_APPLIED_PRICE appliedPrice,
             al = (wSum > 0) ? wSumLoss / wSum : 0;
             break;
          }
-         case RSI_SMMA:
+         case RSI_EMA:
          {
-            // SMMA / Wilder's: alpha = 1/period
-            ag = ((prevAG * (period - 1)) + gain) / period;
-            al = ((prevAL * (period - 1)) + loss) / period;
+            double alpha = 2.0 / (period + 1.0);
+            ag = (alpha * gain) + ((1.0 - alpha) * prevAG);
+            al = (alpha * loss) + ((1.0 - alpha) * prevAL);
             break;
          }
-         default: // RSI_EMA
+         default: // RSI_RMA
          {
-            // EMA: alpha = 2/(period+1)
-            double alpha = 2.0 / (period + 1.0);
+            double alpha = 1.0 / period;
             ag = (alpha * gain) + ((1.0 - alpha) * prevAG);
             al = (alpha * loss) + ((1.0 - alpha) * prevAL);
             break;
@@ -242,8 +263,8 @@ double CalculateRSI(int index, int period, ENUM_APPLIED_PRICE appliedPrice,
       }
    }
    
-   avgGain[index] = ag;
-   avgLoss[index] = al;
+   avgGain[barIndex] = ag;
+   avgLoss[barIndex] = al;
    
    if(al < 0.0000001) return 100.0;
    double rs = ag / al;
@@ -276,68 +297,48 @@ int OnInit()
    IndicatorSetString(INDICATOR_SHORTNAME, "Multi-TF RSI");
    IndicatorSetInteger(INDICATOR_DIGITS, 1);
 
+   // Reset calculation state
+   g_LastBarTime = 0;
+   g_InitialCalcDone = false;
+
    // Create unique prefix for this chart
    g_ChartPrefix = "RSI_" + IntegerToString(ChartID()) + "_";
 
-   // Load saved state
-   LoadState();
+   // Delete old buttons first (they may have stale state from previous timeframe)
+   DeleteAllButtons();
 
-   // If buttons exist, update from button colors (timeframe change)
-   if(ObjectFind(0, g_ChartPrefix + "Btn_R5") >= 0)
-   {
-      g_ShowRSI1 = (ObjectGetInteger(0, g_ChartPrefix + "Btn_R5", OBJPROP_BGCOLOR) != clrBlack);
-      g_ShowRSI2 = (ObjectGetInteger(0, g_ChartPrefix + "Btn_R15", OBJPROP_BGCOLOR) != clrBlack);
-      g_ShowRSI3 = (ObjectGetInteger(0, g_ChartPrefix + "Btn_R30", OBJPROP_BGCOLOR) != clrBlack);
-      g_ShowRSI4 = (ObjectGetInteger(0, g_ChartPrefix + "Btn_R60", OBJPROP_BGCOLOR) != clrBlack);
-      g_ShowRSI5 = (ObjectGetInteger(0, g_ChartPrefix + "Btn_R240", OBJPROP_BGCOLOR) != clrBlack);
-   }
+   // Load saved state from GlobalVariables (persists across timeframes)
+   LoadState();
 
    // Buffer 0: RSI 5
    SetIndexBuffer(0, RSI1_Buffer);
    ArraySetAsSeries(RSI1_Buffer, true);
    SetIndexLabel(0, "RSI" + IntegerToString(RSI1_Period));
-   if(g_ShowRSI1)
-      SetIndexStyle(0, DRAW_LINE, STYLE_DOT, 1, RSI1_Color);
-   else
-      SetIndexStyle(0, DRAW_NONE);
+   SetIndexStyle(0, DRAW_LINE, RSI1_Style, RSI1_Width, g_ShowRSI1 ? RSI1_Color : clrNONE);
 
    // Buffer 1: RSI 15
    SetIndexBuffer(1, RSI2_Buffer);
    ArraySetAsSeries(RSI2_Buffer, true);
    SetIndexLabel(1, "RSI" + IntegerToString(RSI2_Period));
-   if(g_ShowRSI2)
-      SetIndexStyle(1, DRAW_LINE, STYLE_DASH, 1, RSI2_Color);
-   else
-      SetIndexStyle(1, DRAW_NONE);
+   SetIndexStyle(1, DRAW_LINE, RSI2_Style, RSI2_Width, g_ShowRSI2 ? RSI2_Color : clrNONE);
 
    // Buffer 2: RSI 30
    SetIndexBuffer(2, RSI3_Buffer);
    ArraySetAsSeries(RSI3_Buffer, true);
    SetIndexLabel(2, "RSI" + IntegerToString(RSI3_Period));
-   if(g_ShowRSI3)
-      SetIndexStyle(2, DRAW_LINE, STYLE_SOLID, 2, RSI3_Color);
-   else
-      SetIndexStyle(2, DRAW_NONE);
+   SetIndexStyle(2, DRAW_LINE, RSI3_Style, RSI3_Width, g_ShowRSI3 ? RSI3_Color : clrNONE);
 
    // Buffer 3: RSI 60
    SetIndexBuffer(3, RSI4_Buffer);
    ArraySetAsSeries(RSI4_Buffer, true);
    SetIndexLabel(3, "RSI" + IntegerToString(RSI4_Period));
-   if(g_ShowRSI4)
-      SetIndexStyle(3, DRAW_LINE, STYLE_DASH, 2, RSI4_Color);
-   else
-      SetIndexStyle(3, DRAW_NONE);
+   SetIndexStyle(3, DRAW_LINE, RSI4_Style, RSI4_Width, g_ShowRSI4 ? RSI4_Color : clrNONE);
 
    // Buffer 4: RSI 240
    SetIndexBuffer(4, RSI5_Buffer);
    ArraySetAsSeries(RSI5_Buffer, true);
    SetIndexLabel(4, "RSI" + IntegerToString(RSI5_Period));
-   if(g_ShowRSI5)
-      SetIndexStyle(4, DRAW_LINE, STYLE_SOLID, 2, RSI5_Color);
-   else
-      SetIndexStyle(4, DRAW_NONE);
-
-   // Note: Helper buffers (AvgGain/AvgLoss) are initialized in OnCalculate after resize
+   SetIndexStyle(4, DRAW_LINE, RSI5_Style, RSI5_Width, g_ShowRSI5 ? RSI5_Color : clrNONE);
 
    // Create toggle buttons
    if(ShowToggleButtons)
@@ -369,9 +370,17 @@ int OnCalculate(const int rates_total,
    int minBars = MathMax(RSI5_Period, 150);
    if(rates_total < minBars) return(0);
 
-   // Resize helper buffers only when needed
+   // Detect new bar using bar time
+   datetime currentBarTime = Time[0];
+   bool isNewBar = (currentBarTime != g_LastBarTime);
+   if(isNewBar) g_LastBarTime = currentBarTime;
+   
+   // Determine if full recalculation is needed
+   bool needFullRecalc = (prev_calculated == 0) || !g_InitialCalcDone || isNewBar;
+
+   // Resize and initialize helper arrays when needed
    static int lastRatesTotal = 0;
-   if(rates_total != lastRatesTotal)
+   if(rates_total != lastRatesTotal || needFullRecalc)
    {
       ArrayResize(AvgGain1, rates_total); ArrayResize(AvgLoss1, rates_total);
       ArrayResize(AvgGain2, rates_total); ArrayResize(AvgLoss2, rates_total);
@@ -379,52 +388,38 @@ int OnCalculate(const int rates_total,
       ArrayResize(AvgGain4, rates_total); ArrayResize(AvgLoss4, rates_total);
       ArrayResize(AvgGain5, rates_total); ArrayResize(AvgLoss5, rates_total);
       
-      // Set as series only after resize
       ArraySetAsSeries(AvgGain1, true); ArraySetAsSeries(AvgLoss1, true);
       ArraySetAsSeries(AvgGain2, true); ArraySetAsSeries(AvgLoss2, true);
       ArraySetAsSeries(AvgGain3, true); ArraySetAsSeries(AvgLoss3, true);
       ArraySetAsSeries(AvgGain4, true); ArraySetAsSeries(AvgLoss4, true);
       ArraySetAsSeries(AvgGain5, true); ArraySetAsSeries(AvgLoss5, true);
       
-      lastRatesTotal = rates_total;
-   }
-
-   // Initialize on first run
-   if(prev_calculated == 0)
-   {
       ArrayInitialize(AvgGain1, EMPTY_VALUE); ArrayInitialize(AvgLoss1, EMPTY_VALUE);
       ArrayInitialize(AvgGain2, EMPTY_VALUE); ArrayInitialize(AvgLoss2, EMPTY_VALUE);
       ArrayInitialize(AvgGain3, EMPTY_VALUE); ArrayInitialize(AvgLoss3, EMPTY_VALUE);
       ArrayInitialize(AvgGain4, EMPTY_VALUE); ArrayInitialize(AvgLoss4, EMPTY_VALUE);
       ArrayInitialize(AvgGain5, EMPTY_VALUE); ArrayInitialize(AvgLoss5, EMPTY_VALUE);
+      
+      lastRatesTotal = rates_total;
    }
 
-   // Optimize: only recalculate new bars
+   // Determine Applied Prices
+   ENUM_APPLIED_PRICE ap1 = UseIndividualPrice ? RSI1_AppliedPrice : GlobalAppliedPrice;
+   ENUM_APPLIED_PRICE ap2 = UseIndividualPrice ? RSI2_AppliedPrice : GlobalAppliedPrice;
+   ENUM_APPLIED_PRICE ap3 = UseIndividualPrice ? RSI3_AppliedPrice : GlobalAppliedPrice;
+   ENUM_APPLIED_PRICE ap4 = UseIndividualPrice ? RSI4_AppliedPrice : GlobalAppliedPrice;
+   ENUM_APPLIED_PRICE ap5 = UseIndividualPrice ? RSI5_AppliedPrice : GlobalAppliedPrice;
+
+   // Calculate limit
    int limit;
-   if(prev_calculated == 0)
+   if(needFullRecalc)
       limit = rates_total - RSI5_Period - 10;
    else
-   {
-      // New bar arrived: recalculate bar 0 and bar 1 (just closed)
-      // Same tick: only bar 0
-      int newBars = rates_total - prev_calculated;
-      limit = (newBars > 0) ? 1 : 0;
-   }
+      limit = 0;
+   
+   if(limit < 0) limit = 0;
 
-   // Determine Applied Prices (cached)
-   static ENUM_APPLIED_PRICE ap1, ap2, ap3, ap4, ap5;
-   static bool pricesCached = false;
-   if(!pricesCached || prev_calculated == 0)
-   {
-      ap1 = UseIndividualPrice ? RSI1_AppliedPrice : GlobalAppliedPrice;
-      ap2 = UseIndividualPrice ? RSI2_AppliedPrice : GlobalAppliedPrice;
-      ap3 = UseIndividualPrice ? RSI3_AppliedPrice : GlobalAppliedPrice;
-      ap4 = UseIndividualPrice ? RSI4_AppliedPrice : GlobalAppliedPrice;
-      ap5 = UseIndividualPrice ? RSI5_AppliedPrice : GlobalAppliedPrice;
-      pricesCached = true;
-   }
-
-   // Calculate only necessary bars (from oldest to newest)
+   // Calculate from oldest to newest
    for(int i = limit; i >= 0; i--)
    {
       RSI1_Buffer[i] = CalculateRSI(i, RSI1_Period, ap1, AvgGain1, AvgLoss1);
@@ -433,6 +428,8 @@ int OnCalculate(const int rates_total,
       RSI4_Buffer[i] = CalculateRSI(i, RSI4_Period, ap4, AvgGain4, AvgLoss4);
       RSI5_Buffer[i] = CalculateRSI(i, RSI5_Period, ap5, AvgGain5, AvgLoss5);
    }
+   
+   g_InitialCalcDone = true;
 
    // Update UI every tick
    if(UseDynamicColors)
@@ -457,9 +454,9 @@ void ApplyDynamicColors()
       state = (RSI1_Buffer[0] >= OverboughtLevel) ? 1 : (RSI1_Buffer[0] <= OversoldLevel) ? 2 : 0;
       if(state != lastState1)
       {
-         if(state == 1) SetIndexStyle(0, DRAW_LINE, STYLE_DOT, 2, OverboughtColor);
-         else if(state == 2) SetIndexStyle(0, DRAW_LINE, STYLE_DOT, 2, OversoldColor);
-         else SetIndexStyle(0, DRAW_LINE, STYLE_DOT, 1, RSI1_Color);
+         if(state == 1) SetIndexStyle(0, DRAW_LINE, RSI1_Style, RSI1_Width + 1, OverboughtColor);
+         else if(state == 2) SetIndexStyle(0, DRAW_LINE, RSI1_Style, RSI1_Width + 1, OversoldColor);
+         else SetIndexStyle(0, DRAW_LINE, RSI1_Style, RSI1_Width, RSI1_Color);
          lastState1 = state;
       }
    }
@@ -469,9 +466,9 @@ void ApplyDynamicColors()
       state = (RSI2_Buffer[0] >= OverboughtLevel) ? 1 : (RSI2_Buffer[0] <= OversoldLevel) ? 2 : 0;
       if(state != lastState2)
       {
-         if(state == 1) SetIndexStyle(1, DRAW_LINE, STYLE_DASH, 2, OverboughtColor);
-         else if(state == 2) SetIndexStyle(1, DRAW_LINE, STYLE_DASH, 2, OversoldColor);
-         else SetIndexStyle(1, DRAW_LINE, STYLE_DASH, 1, RSI2_Color);
+         if(state == 1) SetIndexStyle(1, DRAW_LINE, RSI2_Style, RSI2_Width + 1, OverboughtColor);
+         else if(state == 2) SetIndexStyle(1, DRAW_LINE, RSI2_Style, RSI2_Width + 1, OversoldColor);
+         else SetIndexStyle(1, DRAW_LINE, RSI2_Style, RSI2_Width, RSI2_Color);
          lastState2 = state;
       }
    }
@@ -481,9 +478,9 @@ void ApplyDynamicColors()
       state = (RSI3_Buffer[0] >= OverboughtLevel) ? 1 : (RSI3_Buffer[0] <= OversoldLevel) ? 2 : 0;
       if(state != lastState3)
       {
-         if(state == 1) SetIndexStyle(2, DRAW_LINE, STYLE_SOLID, 3, OverboughtColor);
-         else if(state == 2) SetIndexStyle(2, DRAW_LINE, STYLE_SOLID, 3, OversoldColor);
-         else SetIndexStyle(2, DRAW_LINE, STYLE_SOLID, 2, RSI3_Color);
+         if(state == 1) SetIndexStyle(2, DRAW_LINE, RSI3_Style, RSI3_Width + 1, OverboughtColor);
+         else if(state == 2) SetIndexStyle(2, DRAW_LINE, RSI3_Style, RSI3_Width + 1, OversoldColor);
+         else SetIndexStyle(2, DRAW_LINE, RSI3_Style, RSI3_Width, RSI3_Color);
          lastState3 = state;
       }
    }
@@ -493,9 +490,9 @@ void ApplyDynamicColors()
       state = (RSI4_Buffer[0] >= OverboughtLevel) ? 1 : (RSI4_Buffer[0] <= OversoldLevel) ? 2 : 0;
       if(state != lastState4)
       {
-         if(state == 1) SetIndexStyle(3, DRAW_LINE, STYLE_DASH, 3, OverboughtColor);
-         else if(state == 2) SetIndexStyle(3, DRAW_LINE, STYLE_DASH, 3, OversoldColor);
-         else SetIndexStyle(3, DRAW_LINE, STYLE_DASH, 2, RSI4_Color);
+         if(state == 1) SetIndexStyle(3, DRAW_LINE, RSI4_Style, RSI4_Width + 1, OverboughtColor);
+         else if(state == 2) SetIndexStyle(3, DRAW_LINE, RSI4_Style, RSI4_Width + 1, OversoldColor);
+         else SetIndexStyle(3, DRAW_LINE, RSI4_Style, RSI4_Width, RSI4_Color);
          lastState4 = state;
       }
    }
@@ -505,9 +502,9 @@ void ApplyDynamicColors()
       state = (RSI5_Buffer[0] >= OverboughtLevel) ? 1 : (RSI5_Buffer[0] <= OversoldLevel) ? 2 : 0;
       if(state != lastState5)
       {
-         if(state == 1) SetIndexStyle(4, DRAW_LINE, STYLE_SOLID, 3, OverboughtColor);
-         else if(state == 2) SetIndexStyle(4, DRAW_LINE, STYLE_SOLID, 3, OversoldColor);
-         else SetIndexStyle(4, DRAW_LINE, STYLE_SOLID, 2, RSI5_Color);
+         if(state == 1) SetIndexStyle(4, DRAW_LINE, RSI5_Style, RSI5_Width + 1, OverboughtColor);
+         else if(state == 2) SetIndexStyle(4, DRAW_LINE, RSI5_Style, RSI5_Width + 1, OversoldColor);
+         else SetIndexStyle(4, DRAW_LINE, RSI5_Style, RSI5_Width, RSI5_Color);
          lastState5 = state;
       }
    }
@@ -734,62 +731,54 @@ void ToggleRSI(int rsiNum)
       case 1:
          g_ShowRSI1 = !g_ShowRSI1;
          if(g_ShowRSI1)
-         {
-            SetIndexStyle(bufferIndex, DRAW_LINE, STYLE_DOT, 1, RSI1_Color);
-            ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, RSI1_Color);
-         } else {
-            SetIndexStyle(bufferIndex, DRAW_NONE);
-            ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, clrBlack);
-         }
+            SetIndexStyle(bufferIndex, DRAW_LINE, RSI1_Style, RSI1_Width, RSI1_Color);
+         else
+            SetIndexStyle(bufferIndex, DRAW_LINE, RSI1_Style, RSI1_Width, clrNONE);
+         ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, g_ShowRSI1 ? RSI1_Color : clrBlack);
          break;
       case 2:
          g_ShowRSI2 = !g_ShowRSI2;
          if(g_ShowRSI2)
-         {
-            SetIndexStyle(bufferIndex, DRAW_LINE, STYLE_DASH, 1, RSI2_Color);
-            ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, RSI2_Color);
-         } else {
-            SetIndexStyle(bufferIndex, DRAW_NONE);
-            ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, clrBlack);
-         }
+            SetIndexStyle(bufferIndex, DRAW_LINE, RSI2_Style, RSI2_Width, RSI2_Color);
+         else
+            SetIndexStyle(bufferIndex, DRAW_LINE, RSI2_Style, RSI2_Width, clrNONE);
+         ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, g_ShowRSI2 ? RSI2_Color : clrBlack);
          break;
       case 3:
          g_ShowRSI3 = !g_ShowRSI3;
          if(g_ShowRSI3)
-         {
-            SetIndexStyle(bufferIndex, DRAW_LINE, STYLE_SOLID, 2, RSI3_Color);
-            ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, RSI3_Color);
-         } else {
-            SetIndexStyle(bufferIndex, DRAW_NONE);
-            ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, clrBlack);
-         }
+            SetIndexStyle(bufferIndex, DRAW_LINE, RSI3_Style, RSI3_Width, RSI3_Color);
+         else
+            SetIndexStyle(bufferIndex, DRAW_LINE, RSI3_Style, RSI3_Width, clrNONE);
+         ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, g_ShowRSI3 ? RSI3_Color : clrBlack);
          break;
       case 4:
          g_ShowRSI4 = !g_ShowRSI4;
          if(g_ShowRSI4)
-         {
-            SetIndexStyle(bufferIndex, DRAW_LINE, STYLE_DASH, 2, RSI4_Color);
-            ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, RSI4_Color);
-         } else {
-            SetIndexStyle(bufferIndex, DRAW_NONE);
-            ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, clrBlack);
-         }
+            SetIndexStyle(bufferIndex, DRAW_LINE, RSI4_Style, RSI4_Width, RSI4_Color);
+         else
+            SetIndexStyle(bufferIndex, DRAW_LINE, RSI4_Style, RSI4_Width, clrNONE);
+         ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, g_ShowRSI4 ? RSI4_Color : clrBlack);
          break;
       case 5:
          g_ShowRSI5 = !g_ShowRSI5;
          if(g_ShowRSI5)
-         {
-            SetIndexStyle(bufferIndex, DRAW_LINE, STYLE_SOLID, 2, RSI5_Color);
-            ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, RSI5_Color);
-         } else {
-            SetIndexStyle(bufferIndex, DRAW_NONE);
-            ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, clrBlack);
-         }
+            SetIndexStyle(bufferIndex, DRAW_LINE, RSI5_Style, RSI5_Width, RSI5_Color);
+         else
+            SetIndexStyle(bufferIndex, DRAW_LINE, RSI5_Style, RSI5_Width, clrNONE);
+         ObjectSetInteger(0, btnName, OBJPROP_BGCOLOR, g_ShowRSI5 ? RSI5_Color : clrBlack);
          break;
    }
 
    SaveState();
-   ChartRedraw();
+   
+   // Force indicator window to redraw
+   ChartRedraw(0);
+   
+   // Also redraw the indicator subwindow specifically
+   int window = ChartWindowFind(0, "Multi-TF RSI");
+   if(window >= 0)
+      ChartRedraw(0);
 }
 
 
@@ -811,7 +800,8 @@ void DeleteAllButtons()
 //+------------------------------------------------------------------+
 void LoadState()
 {
-   string prefix = "MTFRSI_" + Symbol() + "_" + IntegerToString(Period()) + "_";
+   // Use Symbol only (not timeframe) so settings apply to all timeframes
+   string prefix = "MTFRSI_" + Symbol() + "_";
    
    if(GlobalVariableCheck(prefix + "RSI1"))
    {
@@ -821,6 +811,10 @@ void LoadState()
       g_ShowRSI4 = (GlobalVariableGet(prefix + "RSI4") > 0);
       g_ShowRSI5 = (GlobalVariableGet(prefix + "RSI5") > 0);
       g_MenuExpanded = (GlobalVariableGet(prefix + "MenuExpanded") > 0);
+      
+      // Debug: Print loaded state
+      Print("LoadState: RSI1=", g_ShowRSI1, " RSI2=", g_ShowRSI2, " RSI3=", g_ShowRSI3, 
+            " RSI4=", g_ShowRSI4, " RSI5=", g_ShowRSI5, " Menu=", g_MenuExpanded);
    }
    else
    {
@@ -831,6 +825,10 @@ void LoadState()
       g_ShowRSI4 = ShowRSI4;
       g_ShowRSI5 = ShowRSI5;
       g_MenuExpanded = false;
+      
+      // Save initial state
+      SaveState();
+      Print("LoadState: First run, using defaults");
    }
 }
 
@@ -839,7 +837,8 @@ void LoadState()
 //+------------------------------------------------------------------+
 void SaveState()
 {
-   string prefix = "MTFRSI_" + Symbol() + "_" + IntegerToString(Period()) + "_";
+   // Use Symbol only (not timeframe) so settings apply to all timeframes
+   string prefix = "MTFRSI_" + Symbol() + "_";
    
    GlobalVariableSet(prefix + "RSI1", g_ShowRSI1 ? 1 : 0);
    GlobalVariableSet(prefix + "RSI2", g_ShowRSI2 ? 1 : 0);
@@ -847,6 +846,10 @@ void SaveState()
    GlobalVariableSet(prefix + "RSI4", g_ShowRSI4 ? 1 : 0);
    GlobalVariableSet(prefix + "RSI5", g_ShowRSI5 ? 1 : 0);
    GlobalVariableSet(prefix + "MenuExpanded", g_MenuExpanded ? 1 : 0);
+   
+   // Debug: Print saved state
+   Print("SaveState: RSI1=", g_ShowRSI1, " RSI2=", g_ShowRSI2, " RSI3=", g_ShowRSI3, 
+         " RSI4=", g_ShowRSI4, " RSI5=", g_ShowRSI5, " Menu=", g_MenuExpanded);
 }
 
 //+------------------------------------------------------------------+
@@ -854,6 +857,9 @@ void SaveState()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
+   // Debug: Print reason
+   Print("OnDeinit: reason=", reason, " (1=REMOVE, 3=CHARTCHANGE, 4=CLOSE)");
+   
    // Always save state before cleanup
    SaveState();
 
